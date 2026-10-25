@@ -242,7 +242,7 @@ footer.nav .btn{flex:1;}
   </div>
 
   <div class="card" id="step4Card">
-    <h2><span class="stepnum">3</span>記錄歧義與判定依據</h2>
+    <h2><span class="stepnum">3</span>判斷結果與原因</h2>
 
     <div class="field">
       <span class="flabel">是否有其他可能符合的道路單元？</span>
@@ -254,14 +254,14 @@ footer.nav .btn{flex:1;}
     </div>
 
     <div class="field" id="basisField">
-      <span class="flabel">判定依據（可複選）</span>
-      <p class="smallnote" style="margin-top:0;">請依實際使用的判斷依據勾選；僅有查報點距離較近，不代表已確認道路單元。</p>
+      <span class="flabel">判斷依據（可複選）</span>
+      <p class="smallnote" style="margin-top:0;">請勾選您實際參考的資訊。查報紅點靠近某個道路單元，不代表一定是該單元。</p>
       <div id="basisList"></div>
     </div>
 
     <div class="field" id="difficultyField">
-      <span class="flabel">判定困難或限制（可複選）</span>
-      <p class="smallnote" style="margin-top:0;">若有無法確認或存在歧義的情形，請勾選主要原因；沒有則可不勾選。</p>
+      <span class="flabel">判斷時遇到的困難（可複選）</span>
+      <p class="smallnote" style="margin-top:0;">如有以下情況請勾選，沒有則不需勾選。</p>
       <div id="difficultyList"></div>
     </div>
 
@@ -297,17 +297,17 @@ const TOOL_VERSION = "v2-200-2026-10-25";
 
 const BASIS_OPTIONS = [
   "查報地址的道路名稱與所選道路一致",
-  "查報座標位置與所選道路單元相符",
-  "門牌號碼或地址範圍可對應至所選道路單元",
-  "查報地點描述可協助確認道路位置",
+  "查報紅點的位置與所選道路單元位置相符",
+  "門牌號碼或地址範圍與所選道路單元相符",
+  "查報內容的地點描述有助於判斷道路位置",
   "其他（請於補充說明填寫）"
 ];
 const DIFFICULTY_OPTIONS = [
-  "查報地址或位置描述不夠明確",
-  "查報地址與地圖位置不一致",
-  "多條道路均可能符合查報位置",
-  "同一道路有多個相近單元，難以區分",
-  "道路單元圖資或位置精度不足以判定",
+  "查報地址或地點描述不清楚",
+  "查報地址與地圖上的紅點位置不一致",
+  "有多條道路可能符合查報位置",
+  "同一條道路有多個相近單元，難以區分",
+  "地圖資訊不足或位置不夠精確，難以判斷",
   "其他（請於補充說明填寫）"
 ];
 
