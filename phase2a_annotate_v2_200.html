@@ -255,8 +255,12 @@ footer.nav .btn{flex:1;}
 
     <div class="field" id="basisField">
       <span class="flabel">判斷依據（可複選）</span>
-      <p class="smallnote" style="margin-top:0;">請勾選您實際參考的資訊。查報紅點靠近某個道路單元，不代表一定是該單元。</p>
+      <p class="smallnote" style="margin-top:0;">請勾選您判斷道路位置時，實際使用的資訊。</p>
       <div id="basisList"></div>
+    </div>
+    <div class="field">
+      <label class="flabel" for="notesBasisInput">判斷依據補充說明（選填）</label>
+      <textarea id="notesBasisInput" placeholder="若勾選「其他資訊」，或想補充您實際使用的判斷依據，請在此說明。"></textarea>
     </div>
 
     <div class="field" id="difficultyField">
@@ -264,10 +268,9 @@ footer.nav .btn{flex:1;}
       <p class="smallnote" style="margin-top:0;">如有以下情況請勾選，沒有則不需勾選。</p>
       <div id="difficultyList"></div>
     </div>
-
     <div class="field">
-      <label class="flabel" for="notesInput">補充說明（選填）</label>
-      <textarea id="notesInput" placeholder="如有多個合理候選、地址與地圖不一致，或無法確認道路單元，請簡述主要原因。"></textarea>
+      <label class="flabel" for="notesDifficultyInput">判斷困難補充說明（選填）</label>
+      <textarea id="notesDifficultyInput" placeholder="若勾選「其他」，或想補充判斷時遇到的困難，請在此說明。"></textarea>
     </div>
   </div>
 
@@ -296,18 +299,19 @@ const DATA_DIR = "";  // case JSON files sit next to this HTML file, no subfolde
 const TOOL_VERSION = "v2-200-2026-10-25";
 
 const BASIS_OPTIONS = [
-  "查報地址的道路名稱與所選道路一致",
-  "查報紅點的位置與所選道路單元位置相符",
-  "門牌號碼或地址範圍與所選道路單元相符",
-  "查報內容的地點描述有助於判斷道路位置",
-  "其他（請於補充說明填寫）"
+  "查報地址與地圖上的道路名稱相符",
+  "查報紅點的位置與所選道路單元相符",
+  "地圖上的路口及道路位置與查報地址相符",
+  "地圖上的門牌號碼或周邊地標有助於確認位置",
+  "其他資訊（請於補充說明填寫）"
 ];
 const DIFFICULTY_OPTIONS = [
-  "查報地址或地點描述不清楚",
-  "查報地址與地圖上的紅點位置不一致",
-  "有多條道路可能符合查報位置",
-  "同一條道路有多個相近單元，難以區分",
-  "地圖資訊不足或位置不夠精確，難以判斷",
+  "查報地址或地點描述不夠明確",
+  "查報地址與地圖紅點所指的位置不一致",
+  "地圖上的道路名稱或位置不易辨識",
+  "附近有多條不同道路，難以判斷查報地點屬於哪一條道路。",
+  "同一條道路有多個相近的道路單元，難以判斷查報地點屬於哪一個單元。",
+  "查報紅點與道路單元的位置關係不明確",
   "其他（請於補充說明填寫）"
 ];
 
@@ -339,7 +343,7 @@ function saveAnswers(){
 function blankAnswer(){
   return {outcome:"", unit_id:"", road_name:"", in_candidate_list:null,
           tentative_unit_id:"", tentative_road_name:"", tentative_in_candidate_list:null,
-          ambiguity:"", basis:[], difficulty:[], notes:""};
+          ambiguity:"", basis:[], difficulty:[], notes_basis:"", notes_difficulty:""};
 }
 function curCaseId(){ return idx === -1 ? CASE_INDEX[0].case_id : CASE_INDEX[idx].case_id; }
 function curKey(){ return idx === -1 ? "__practice__" : curCaseId(); }
@@ -585,7 +589,8 @@ function renderOutcomeState(){
 function renderFormState(){
   const a = curAnswer();
   document.querySelectorAll('input[name=ambig]').forEach(r => r.checked = (r.value === a.ambiguity));
-  document.getElementById('notesInput').value = a.notes || '';
+  document.getElementById('notesBasisInput').value = a.notes_basis || '';
+  document.getElementById('notesDifficultyInput').value = a.notes_difficulty || '';
   renderOutcomeState();
   updateSelBox();
 }
@@ -675,8 +680,11 @@ document.querySelectorAll('input[name=outcome]').forEach(r => r.onchange = () =>
 document.querySelectorAll('input[name=ambig]').forEach(r => r.onchange = () => {
   curAnswer().ambiguity = r.value; saveAnswers(); renderJumpRow(); renderProgress();
 });
-document.getElementById('notesInput').oninput = (e) => {
-  curAnswer().notes = e.target.value; saveAnswers();
+document.getElementById('notesBasisInput').oninput = (e) => {
+  curAnswer().notes_basis = e.target.value; saveAnswers();
+};
+document.getElementById('notesDifficultyInput').oninput = (e) => {
+  curAnswer().notes_difficulty = e.target.value; saveAnswers();
 };
 document.getElementById('prevBtn').onclick = () => { if(idx>0){ idx--; renderAll(); } };
 document.getElementById('nextBtn').onclick = () => {
@@ -693,7 +701,7 @@ document.getElementById('jumpGoBtn').onclick = () => {
 function buildExportText(){
   const rows = [["case_id","annotator","tool_version","outcome","judged_road_name","judged_unit_id",
     "in_candidate_list","tentative_road_name","tentative_unit_id","tentative_in_candidate_list",
-    "has_ambiguity","basis","difficulty","notes","exported_at"]];
+    "has_ambiguity","basis","notes_basis","difficulty","notes_difficulty","exported_at"]];
   CASE_INDEX.forEach(c => {
     const a = answers[c.case_id] || blankAnswer();
     rows.push([
@@ -701,8 +709,9 @@ function buildExportText(){
       a.in_candidate_list===null?'':(a.in_candidate_list?'TRUE':'FALSE'),
       a.tentative_road_name||'', a.tentative_unit_id||'',
       a.tentative_in_candidate_list===null?'':(a.tentative_in_candidate_list?'TRUE':'FALSE'),
-      a.ambiguity||'', (a.basis||[]).join(';'), (a.difficulty||[]).join(';'),
-      (a.notes||'').replace(/\n/g,' '), new Date().toISOString()
+      a.ambiguity||'', (a.basis||[]).join(';'), (a.notes_basis||'').replace(/\n/g,' '),
+      (a.difficulty||[]).join(';'), (a.notes_difficulty||'').replace(/\n/g,' '),
+      new Date().toISOString()
     ]);
   });
   return rows.map(r => r.map(v => {
