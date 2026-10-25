@@ -1,0 +1,685 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>道路查報案件人工空間配對驗證</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+<style>
+:root{
+  --bg:#f7f5f1; --panel:#ffffff; --panel2:#faf8f4; --ink:#2b2824; --ink-dim:#6b6358; --line:#e3ddd2;
+  --accent:#8a4b2e; --accent-ink:#ffffff; --accent-soft:#f1e3d6;
+  --candidate:#3f6e5e; --candidate-fill:#e4efe9; --extra:#8c8578; --extra-fill:#e9e6df;
+  --report:#b23b3b; --report-fill:#f7dede; --pave:#5b84a8;
+  --ok:#3f6e5e; --warn:#b2792f; --bad:#b23b3b;
+  --shadow:0 2px 10px rgba(43,40,36,0.08);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#1c1a17; --panel:#272421; --panel2:#2e2a26; --ink:#ece7df; --ink-dim:#aba497; --line:#433e37;
+    --accent:#e0a375; --accent-ink:#1c1a17; --accent-soft:#3a2c21;
+    --candidate:#7fbfa5; --candidate-fill:#20352c; --extra:#9b9384; --extra-fill:#332f29;
+    --report:#e08080; --report-fill:#3a2424; --pave:#7fa8cc;
+    --ok:#7fbfa5; --warn:#e0b968; --bad:#e08080;
+    --shadow:0 2px 10px rgba(0,0,0,0.3);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#1c1a17; --panel:#272421; --panel2:#2e2a26; --ink:#ece7df; --ink-dim:#aba497; --line:#433e37;
+  --accent:#e0a375; --accent-ink:#1c1a17; --accent-soft:#3a2c21;
+  --candidate:#7fbfa5; --candidate-fill:#20352c; --extra:#9b9384; --extra-fill:#332f29;
+  --report:#e08080; --report-fill:#3a2424; --pave:#7fa8cc;
+  --ok:#7fbfa5; --warn:#e0b968; --bad:#e08080;
+  --shadow:0 2px 10px rgba(0,0,0,0.3);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans TC",system-ui,sans-serif;}
+body{padding:0 0 90px;max-width:620px;margin:0 auto;min-height:100vh;}
+.mono{font-family:"IBM Plex Mono",monospace;}
+header{padding:14px 16px 10px;position:sticky;top:0;background:var(--bg);z-index:5;border-bottom:1px solid var(--line);}
+h1{font-size:16px;margin:0 0 2px;font-weight:700;}
+.sub{font-size:12px;color:var(--ink-dim);}
+.progress{display:flex;align-items:center;gap:8px;margin-top:8px;}
+.progress .bar{flex:1;height:6px;background:var(--line);border-radius:4px;overflow:hidden;}
+.progress .fill{height:100%;background:var(--accent);border-radius:4px;transition:width .2s;}
+.progress .count{font-size:12px;color:var(--ink-dim);white-space:nowrap;}
+main{padding:12px 16px;}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:var(--shadow);}
+.card h2{font-size:12px;margin:0 0 8px;color:var(--ink-dim);font-weight:700;letter-spacing:.03em;display:flex;align-items:center;gap:6px;}
+.stepnum{width:20px;height:20px;border-radius:50%;background:var(--accent);color:var(--accent-ink);
+  display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;}
+.addr{font-size:15px;font-weight:600;line-height:1.5;}
+.caseid{font-size:12px;color:var(--ink-dim);margin-top:2px;}
+.addrrecap{font-size:13px;font-weight:600;color:var(--ink);background:var(--panel2);padding:8px 10px;
+  border-radius:8px;margin-top:10px;display:flex;gap:8px;align-items:baseline;}
+.addrrecap .lbl{font-size:11px;font-weight:700;color:var(--ink-dim);flex-shrink:0;}
+.mapwrap2{position:relative;}
+#map{height:340px;border-radius:10px;border:1px solid var(--line);background:#ddd;}
+.maplock{position:absolute;inset:0;z-index:1000;background:rgba(43,40,36,.38);border-radius:10px;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.maplock span{background:var(--panel);color:var(--ink);padding:10px 16px;border-radius:9px;font-size:13px;
+  font-weight:700;box-shadow:var(--shadow);}
+.leaflet-popup-content{font-family:"Noto Sans TC",sans-serif;font-size:13px;}
+.legend{display:flex;gap:12px;font-size:11px;color:var(--ink-dim);margin-top:8px;flex-wrap:wrap;}
+.legend span{display:inline-flex;align-items:center;gap:5px;}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block;}
+.dot.c{background:var(--candidate-fill);border:2px solid var(--candidate);}
+.dot.e{background:var(--extra-fill);border:2px solid var(--extra);}
+.dot.r{background:var(--report);}
+.sw{width:14px;height:10px;background:var(--pave);opacity:.45;border:1px solid var(--pave);display:inline-block;}
+.togglebar{display:flex;align-items:center;justify-content:space-between;margin-top:8px;gap:8px;}
+.togglebar .btn{flex-shrink:0;}
+.candlist{display:flex;flex-direction:column;gap:6px;margin-top:10px;max-height:260px;overflow-y:auto;}
+.crow{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;cursor:pointer;background:var(--panel2);}
+.crow.sel{border-color:var(--accent);background:var(--accent-soft);}
+.crow.extra{opacity:.85;}
+.crow .badge{width:22px;height:22px;border-radius:50%;background:var(--candidate-fill);color:var(--candidate);
+  display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;}
+.crow.extra .badge{background:var(--extra-fill);color:var(--extra);}
+.crow.sel .badge{background:var(--accent);color:var(--accent-ink);}
+.crow .rname{font-size:13.5px;font-weight:600;}
+.crow .rid{font-size:11px;color:var(--ink-dim);}
+.crow .tag{font-size:10px;padding:1px 6px;border-radius:5px;background:var(--extra-fill);color:var(--ink-dim);margin-left:auto;flex-shrink:0;}
+.selbox{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:10px;
+  background:var(--accent-soft);border:1px solid var(--accent);margin-top:10px;}
+.selbox.empty{background:var(--panel2);border-color:var(--line);color:var(--ink-dim);}
+.selbox .lbl{font-size:11px;color:var(--ink-dim);}
+.selbox .val{font-size:14px;font-weight:700;}
+.btn{border:1px solid var(--line);background:var(--panel2);color:var(--ink);border-radius:9px;padding:9px 14px;
+  font-size:13px;font-weight:600;cursor:pointer;}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);}
+.btn.ghost{background:transparent;}
+.btn.sm{padding:6px 10px;font-size:12px;}
+.btn:disabled{opacity:.4;cursor:not-allowed;}
+.help{font-size:12px;color:var(--ink-dim);background:var(--panel2);border-radius:8px;padding:8px 10px;margin:6px 0 10px;line-height:1.55;}
+.help.tip{background:var(--accent-soft);border:1px dashed var(--accent);color:var(--ink);}
+.radiorow{display:flex;gap:8px;flex-wrap:wrap;}
+.radiorow label{flex:1;min-width:84px;text-align:center;padding:9px 6px;border:1px solid var(--line);border-radius:9px;
+  font-size:12.5px;font-weight:600;cursor:pointer;background:var(--panel2);}
+.radiorow input{display:none;}
+.radiorow label:has(input:checked){background:var(--accent);color:var(--accent-ink);border-color:var(--accent);}
+.radiorow.outcome label{min-width:auto;flex:1 1 100%;text-align:left;padding:10px 12px;}
+textarea,input[type=text]{width:100%;border:1px solid var(--line);border-radius:9px;padding:9px 10px;font-size:13.5px;
+  background:var(--panel2);color:var(--ink);font-family:inherit;}
+textarea{min-height:60px;resize:vertical;}
+.field{margin-bottom:14px;}
+.field > .flabel{font-size:13px;font-weight:700;margin-bottom:6px;display:block;}
+.check{display:flex;align-items:flex-start;gap:8px;padding:6px 2px;}
+.check input{margin-top:3px;width:17px;height:17px;flex-shrink:0;}
+.check label{font-size:13.5px;line-height:1.4;}
+footer.nav{position:fixed;bottom:0;left:0;right:0;background:var(--panel);border-top:1px solid var(--line);
+  padding:10px 16px calc(10px + env(safe-area-inset-bottom));display:flex;gap:10px;max-width:620px;margin:0 auto;z-index:6;}
+footer.nav .btn{flex:1;}
+.setup{padding:30px 20px;}
+.setup .card{max-width:440px;margin:0 auto;}
+.hidden{display:none !important;}
+.jumprow{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
+.jumprow button{width:30px;height:30px;border-radius:7px;border:1px solid var(--line);background:var(--panel2);
+  font-size:11px;color:var(--ink-dim);cursor:pointer;font-family:"IBM Plex Mono",monospace;border-bottom-width:3px;}
+.jumprow button.cur{border-color:var(--accent);color:var(--accent);font-weight:700;}
+.exportarea{width:100%;min-height:160px;font-family:"IBM Plex Mono",monospace;font-size:11px;}
+.smallnote{font-size:11.5px;color:var(--ink-dim);margin-top:6px;line-height:1.5;}
+.practicebadge{display:inline-block;background:var(--warn);color:#fff;font-size:11px;font-weight:700;padding:2px 8px;
+  border-radius:6px;margin-bottom:8px;}
+.stepline{display:flex;align-items:center;gap:6px;margin-bottom:8px;}
+.unit-marker-label{background:transparent;border:none;box-shadow:none;}
+.unit-marker-label div{font-size:10px;font-weight:700;color:var(--ink);background:var(--panel);border:1px solid var(--candidate);
+  border-radius:4px;padding:0 3px;white-space:nowrap;}
+</style>
+</head>
+<body>
+
+<div id="setupView" class="setup">
+  <div class="card">
+    <h2 style="font-size:13px;">道路查報案件人工空間配對驗證</h2>
+    <p style="font-size:14px;line-height:1.7;margin-top:0;">
+      這是 Paper 1 研究的一部分：請依據<b>道路損壞查報案件的地址、位置資訊</b>及<b>道路圖資</b>，
+      判斷每筆案件最可能對應的道路及道路單元，並記錄您的判斷證據是否充分。
+    </p>
+    <p style="font-size:14px;line-height:1.7;">
+      若現有資訊不足以確認特定道路單元，請依實際情況選擇「暫定候選道路單元」或「無法判定道路單元」，
+      <b>不需要勉強選出答案</b>。系統提供的候選清單僅供參考，請同時檢視地圖上的其他道路單元。
+    </p>
+    <p style="font-size:13px;line-height:1.6;color:var(--ink-dim);">
+      開始前會先有一筆<b>示範案例</b>（不計入正式結果），帶您熟悉地圖操作與各欄位意義，之後才進入正式 20 筆。
+    </p>
+    <div class="field">
+      <label class="flabel" for="nameInput">標註代號</label>
+      <input type="text" id="nameInput" placeholder="例如：annotatorA">
+    </div>
+    <button class="btn primary" id="startBtn" style="width:100%;">開始示範案例</button>
+    <p class="smallnote">本版工具（v2，2026-10-25）改為互動地圖為主：可自由平移縮放、顯示道路鋪面範圍圖資與候選清單外的道路單元。作答仍會儲存在您這支裝置的瀏覽器中。</p>
+  </div>
+</div>
+
+<div id="practiceIntro" class="hidden setup">
+  <div class="card">
+    <span class="practicebadge">示範案例・不計入正式結果</span>
+    <h2 style="font-size:13px;">地圖操作與名詞說明</h2>
+    <div class="help tip">
+      <b>道路名稱</b> vs <b>道路單元</b>：同一條路（例如「中山北路二段」）會被切成很多小段「道路單元」，
+      每個單元有自己的編號（單元ID）。您有時能確定是哪一條路，但不一定能確定是哪一個單元——這兩者請分開判斷。
+    </div>
+    <div class="help tip">
+      地圖上的<b>藍色色塊</b>是道路鋪面範圍圖資（政府道路鋪面測量範圍，供參考，不代表單一道路單元的精確邊界），
+      <b>綠色圓點</b>是系統原本提供的候選道路單元，<b>灰色圓點</b>是候選清單以外、但在附近範圍內的其他道路單元
+      （需要按「顯示候選清單外單元」才會出現），<b>紅點</b>是查報地點。
+    </div>
+    <div class="help tip">
+      候選清單（綠點）只是系統篩選的結果，<b>不代表正確答案</b>。如果您判斷正確答案不在候選清單中，可以直接點選
+      灰色的清單外單元；如果連灰色清單中也找不到、或範圍內完全沒有合理答案，可以在地圖上自由平移到更遠處尋找，
+      找不到的話就記錄「無法判定道路單元」，不需要勉強選一個答案。
+    </div>
+    <button class="btn primary" id="toPracticeBtn" style="width:100%;">進入示範案例</button>
+  </div>
+</div>
+
+<div id="mainView" class="hidden">
+<header>
+  <h1 id="headerTitle">道路查報案件人工空間配對驗證</h1>
+  <div class="sub mono" id="whoLine"></div>
+  <div class="progress" id="progressRow">
+    <div class="bar"><div class="fill" id="progFill"></div></div>
+    <div class="count mono" id="progCount"></div>
+  </div>
+  <div class="jumprow" id="jumpRow"></div>
+</header>
+
+<main>
+  <div class="card" id="practiceBanner" class="hidden">
+  </div>
+
+  <div class="card">
+    <h2><span class="stepnum">1</span>確認查報位置</h2>
+    <div class="addr" id="addrText"></div>
+    <div class="caseid mono" id="caseIdText"></div>
+    <p class="smallnote">請確認下方地圖上的紅點是否與這個地址描述的位置相符，再進行下一步判讀。</p>
+  </div>
+
+  <div class="card">
+    <h2><span class="stepnum">2</span>在地圖上辨識道路單元</h2>
+    <div class="mapwrap2">
+      <div id="map"></div>
+      <div class="maplock" id="mapLock"><span>點一下以操作地圖（平移／縮放）</span></div>
+    </div>
+    <div class="addrrecap"><span class="lbl">查報地址</span><span id="addrRecap"></span></div>
+    <div class="selbox empty" id="selBox">
+      <div><div class="lbl">目前選擇</div><div class="val" id="selVal">尚未選擇</div></div>
+      <button class="btn ghost sm" id="clearSelBtn">清除</button>
+    </div>
+    <div class="legend">
+      <span><span class="dot r"></span>查報地點</span>
+      <span><span class="dot c"></span>候選清單內單元</span>
+      <span><span class="dot e"></span>候選清單外單元</span>
+      <span><span class="sw"></span>道路鋪面範圍</span>
+    </div>
+    <p class="smallnote">候選清單是系統先篩選出的結果，<b>不代表正確答案</b>，請同時查看地圖上其他道路單元再做判斷。地圖可自由平移、縮放，不限於初始範圍；點選圓點或清單列即可選取，點選藍色路面色塊可查看道路名稱。</p>
+    <div class="togglebar">
+      <button class="btn sm" id="toggleExtraBtn" style="margin-left:auto;">顯示候選清單外單元</button>
+    </div>
+    <div class="candlist" id="candList"></div>
+  </div>
+
+  <div class="card">
+    <h2><span class="stepnum">3</span>選擇判定結果</h2>
+    <p class="smallnote" style="margin-top:0;">請依據查報地址、位置資訊及道路圖資，選擇最符合本案的判定結果。</p>
+    <div class="radiorow outcome" id="outcomeRow">
+      <label><input type="radio" name="outcome" value="confirmed"><span><b>已確認道路單元</b><br>現有資訊足以確認案件對應的特定道路單元。</span></label>
+      <label><input type="radio" name="outcome" value="tentative"><span><b>暫定候選道路單元</b><br>可以選出最可能的道路單元，但仍缺乏足夠資訊確認。</span></label>
+      <label><input type="radio" name="outcome" value="undetermined"><span><b>無法判定道路單元</b><br>無法根據現有資訊選出特定道路單元。</span></label>
+    </div>
+  </div>
+
+  <div class="card" id="step4Card">
+    <h2><span class="stepnum">4</span>記錄歧義與判定依據</h2>
+
+    <div class="field">
+      <span class="flabel">是否存在道路單元判定歧義？（單選）</span>
+      <p class="smallnote" style="margin-top:0;">請依查報資訊及地圖上可辨識的道路單元進行判斷。本題與前述「判定結果」分別評估——即使已選定最可能的道路單元，若仍有其他合理候選，也應勾選「有歧義」。</p>
+      <div class="radiorow outcome">
+        <label><input type="radio" name="ambig" value="是"><span><b>有歧義</b><br>存在兩個以上合理候選道路單元，無法明確排除其他候選。</span></label>
+        <label><input type="radio" name="ambig" value="否"><span><b>無歧義</b><br>現有資訊足以確認只有一個合理候選道路單元。</span></label>
+        <label><input type="radio" name="ambig" value="無法判斷"><span><b>資訊不足，無法判斷</b><br>現有資訊不足以判斷是否存在其他合理候選道路單元。</span></label>
+      </div>
+    </div>
+
+    <div class="field" id="basisField">
+      <span class="flabel">判定依據（可複選）</span>
+      <p class="smallnote" style="margin-top:0;">請依實際使用的判斷依據勾選；僅有查報點距離較近，不代表已確認道路單元。</p>
+      <div id="basisList"></div>
+    </div>
+
+    <div class="field" id="difficultyField">
+      <span class="flabel">判定困難或限制（可複選）</span>
+      <p class="smallnote" style="margin-top:0;">若有無法確認或存在歧義的情形，請勾選主要原因；沒有則可不勾選。</p>
+      <div id="difficultyList"></div>
+    </div>
+
+    <div class="field">
+      <label class="flabel" for="notesInput">補充說明（選填）</label>
+      <textarea id="notesInput" placeholder="如有多個合理候選、地址與地圖不一致，或無法確認道路單元，請簡述主要原因。"></textarea>
+    </div>
+  </div>
+
+  <div class="card hidden" id="exportCard">
+    <h2>匯出結果</h2>
+    <p class="smallnote">填完 20 筆正式案例後，按下方按鈕產生結果文字，複製後傳給研究者即可。示範案例不會被匯出。</p>
+    <button class="btn primary" id="exportBtn" style="width:100%;margin-bottom:8px;">產生匯出結果</button>
+    <textarea class="exportarea hidden" id="exportArea" readonly></textarea>
+    <button class="btn hidden" id="copyBtn" style="width:100%;margin-top:8px;">複製全部結果</button>
+    <div class="smallnote" id="copyStatus"></div>
+  </div>
+</main>
+
+<footer class="nav">
+  <button class="btn" id="prevBtn">← 上一筆</button>
+  <button class="btn primary" id="nextBtn">下一筆 →</button>
+</footer>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script>
+const CASES = /*__CASES_JSON__*/;
+const TOOL_VERSION = "v2-2026-10-25";
+
+const BASIS_OPTIONS = [
+  "查報地址的道路名稱與所選道路一致",
+  "查報座標位置與所選道路單元相符",
+  "門牌號碼或地址範圍可對應至所選道路單元",
+  "查報地點描述可協助確認道路位置",
+  "其他（請於補充說明填寫）"
+];
+const DIFFICULTY_OPTIONS = [
+  "查報地址或位置描述不夠明確",
+  "查報地址與地圖位置不一致",
+  "多條道路均可能符合查報位置",
+  "同一道路有多個相近單元，難以區分",
+  "道路單元圖資或位置精度不足以判定",
+  "其他（請於補充說明填寫）"
+];
+
+const TILE_URL = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}";
+const TILE_ATTRIB = "Tiles &copy; Esri";
+
+let ANNOTATOR = "";
+let idx = -1; // -1 = practice case
+let answers = {};
+let map = null;
+let layerGroup = null;
+let extraCluster = null;
+let showExtra = false;
+let markerById = {};
+
+function storageKey(){ return "phase2a_v2_annot_" + ANNOTATOR; }
+function loadAnswers(){
+  try{
+    const raw = localStorage.getItem(storageKey());
+    answers = raw ? JSON.parse(raw) : {};
+  }catch(e){ answers = {}; }
+}
+function saveAnswers(){
+  try{ localStorage.setItem(storageKey(), JSON.stringify(answers)); }catch(e){}
+}
+function blankAnswer(){
+  return {outcome:"", unit_id:"", road_name:"", in_candidate_list:null,
+          ambiguity:"", basis:[], difficulty:[], notes:""};
+}
+function curCase(){ return idx === -1 ? CASES[0] : CASES[idx]; }
+function curKey(){ return idx === -1 ? "__practice__" : curCase().case_id; }
+function curAnswer(){
+  const k = curKey();
+  if(!answers[k]) answers[k] = blankAnswer();
+  return answers[k];
+}
+function isComplete(a){
+  if(a.outcome === "undetermined") return !!a.ambiguity;
+  if(a.outcome === "confirmed" || a.outcome === "tentative"){
+    return !!(a.unit_id && a.ambiguity);
+  }
+  return false;
+}
+
+function initMap(){
+  map = L.map('map', {
+    zoomControl:true,
+    dragging:false, scrollWheelZoom:false, touchZoom:false, doubleClickZoom:false, boxZoom:false
+  });
+  const tiles = L.tileLayer(TILE_URL, {maxZoom:21, attribution:TILE_ATTRIB}).addTo(map);
+  let tileErrorShown = false;
+  tiles.on('tileerror', () => {
+    if(tileErrorShown) return;
+    tileErrorShown = true;
+    const warn = document.createElement('div');
+    warn.className = 'help';
+    warn.style.cssText = 'background:var(--bad);color:#fff;margin-top:8px;';
+    warn.textContent = '地圖底圖圖磚載入失敗，可能是網路連線問題。候選單元清單仍可正常使用，不影響判讀。';
+    document.querySelector('.mapwrap2').insertAdjacentElement('afterend', warn);
+  });
+  layerGroup = L.layerGroup().addTo(map);
+  extraCluster = L.markerClusterGroup({
+    maxClusterRadius: 55, disableClusteringAtZoom: 19, spiderfyOnMaxZoom: true,
+    iconCreateFunction: (cluster) => L.divIcon({
+      html: '<div style="background:' + getCss('--extra-fill') + ';border:2px solid ' + getCss('--extra') +
+            ';color:' + getCss('--ink-dim') + ';width:30px;height:30px;border-radius:50%;' +
+            'display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">' +
+            cluster.getChildCount() + '</div>',
+      className: '', iconSize:[30,30]
+    })
+  });
+
+  const lock = document.getElementById('mapLock');
+  lock.onclick = () => {
+    map.dragging.enable(); map.scrollWheelZoom.enable();
+    map.touchZoom.enable(); map.doubleClickZoom.enable(); map.boxZoom.enable();
+    lock.classList.add('hidden');
+    map.invalidateSize();
+  };
+}
+
+function unitStyle(u, selected){
+  const inList = u.in_candidate_list;
+  return {
+    radius: selected ? 10 : 7,
+    fillColor: selected ? getCss('--accent') : (inList ? getCss('--candidate-fill') : getCss('--extra-fill')),
+    color: selected ? getCss('--accent') : (inList ? getCss('--candidate') : getCss('--extra')),
+    weight: selected ? 3 : 2,
+    fillOpacity: 0.9,
+  };
+}
+function getCss(varName){
+  return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+}
+
+function extraDivIcon(selected){
+  const bg = selected ? getCss('--accent') : getCss('--extra-fill');
+  const bd = selected ? getCss('--accent') : getCss('--extra');
+  const sz = selected ? 18 : 14;
+  return L.divIcon({
+    html: '<div style="width:'+sz+'px;height:'+sz+'px;border-radius:50%;background:'+bg+
+          ';border:2px solid '+bd+';"></div>',
+    className: '', iconSize:[sz,sz]
+  });
+}
+
+function renderMap(fit){
+  if(fit === undefined) fit = true;
+  const c = curCase();
+  const a = curAnswer();
+  layerGroup.clearLayers();
+  extraCluster.clearLayers();
+  markerById = {};
+
+  // real pavement polygons
+  c.polygons.forEach(p => {
+    const layer = L.geoJSON(p.geojson, {
+      style: {color:getCss('--pave'), weight:2, fillColor:getCss('--pave'), fillOpacity:0.4}
+    });
+    layer.bindPopup('<b>' + (p.road_name||'(未命名路段)') + '</b><br>' +
+      (p.sta_road||'') + ' ～ ' + (p.end_road||''));
+    layer.addTo(layerGroup);
+  });
+
+  // candidate (official 50m) units -- always visible, unclustered
+  const bounds = [];
+  c.units.filter(u => u.in_candidate_list).forEach(u => {
+    const sel = (a.unit_id === u.unit_id);
+    const mk = L.circleMarker([u.lat, u.lon], unitStyle(u, sel));
+    mk.bindTooltip(u.road_name, {permanent:false, direction:'top'});
+    mk.on('click', () => selectUnit(u));
+    mk.addTo(layerGroup);
+    markerById[u.unit_id] = mk;
+    bounds.push([u.lat, u.lon]);
+  });
+
+  // extra (outside-candidate, wider-radius) units -- clustered, only shown when toggled on
+  c.units.filter(u => !u.in_candidate_list).forEach(u => {
+    const sel = (a.unit_id === u.unit_id);
+    const mk = L.marker([u.lat, u.lon], {icon: extraDivIcon(sel)});
+    mk.bindTooltip(u.road_name, {permanent:false, direction:'top'});
+    mk.on('click', () => selectUnit(u));
+    mk.addTo(extraCluster);
+    markerById[u.unit_id] = mk;
+  });
+  if(showExtra && !map.hasLayer(extraCluster)) extraCluster.addTo(map);
+  if(!showExtra && map.hasLayer(extraCluster)) map.removeLayer(extraCluster);
+
+  // report marker
+  const rmk = L.circleMarker([c.report_lat, c.report_lon], {
+    radius:9, fillColor:getCss('--report'), color:'#fff', weight:2, fillOpacity:1
+  });
+  rmk.bindTooltip('查報地點', {permanent:false});
+  rmk.addTo(layerGroup);
+  bounds.push([c.report_lat, c.report_lon]);
+
+  if(fit){
+    if(bounds.length){
+      map.fitBounds(bounds, {padding:[30,30], maxZoom:19});
+    } else {
+      map.setView([c.report_lat, c.report_lon], 18);
+    }
+  }
+  setTimeout(() => map.invalidateSize(), 50);
+}
+
+function renderCandList(){
+  const c = curCase();
+  const a = curAnswer();
+  const list = document.getElementById('candList');
+  list.innerHTML = '';
+  const shown = c.units.filter(u => u.in_candidate_list || showExtra);
+  shown.sort((x,y) => (y.in_candidate_list - x.in_candidate_list));
+  shown.forEach((u, i) => {
+    const row = document.createElement('div');
+    row.className = 'crow' + (a.unit_id === u.unit_id ? ' sel' : '') + (u.in_candidate_list ? '' : ' extra');
+    row.innerHTML = '<div class="badge">' + (u.in_candidate_list ? '候' : '外') + '</div>' +
+      '<div><div class="rname">' + u.road_name + '</div>' +
+      '<div class="rid mono">ID: ' + u.unit_id + '</div></div>' +
+      (u.in_candidate_list ? '' : '<div class="tag">清單外</div>');
+    row.onclick = () => { selectUnit(u); map.panTo([u.lat, u.lon]); };
+    list.appendChild(row);
+  });
+  updateSelBox();
+}
+
+function selectUnit(u){
+  const a = curAnswer();
+  a.unit_id = u.unit_id;
+  a.road_name = u.road_name;
+  a.in_candidate_list = u.in_candidate_list;
+  if(!a.outcome) a.outcome = 'confirmed';
+  saveAnswers();
+  renderMap(false); renderCandList(); updateSelBox(); renderOutcomeState();
+}
+
+function updateSelBox(){
+  const a = curAnswer();
+  const box = document.getElementById('selBox');
+  const val = document.getElementById('selVal');
+  if(a.unit_id){
+    box.classList.remove('empty');
+    val.textContent = a.road_name + '　ID: ' + a.unit_id + (a.in_candidate_list ? '' : '（清單外）');
+  } else {
+    box.classList.add('empty');
+    val.textContent = '尚未選擇';
+  }
+}
+
+function renderCheckGroup(containerId, options, field, idPrefix){
+  const box = document.getElementById(containerId);
+  box.innerHTML = '';
+  const a = curAnswer();
+  options.forEach((opt, oi) => {
+    const row = document.createElement('div');
+    row.className = 'check';
+    const id = idPrefix + '_' + oi;
+    row.innerHTML = '<input type="checkbox" id="'+id+'"><label for="'+id+'">'+opt+'</label>';
+    const chk = row.querySelector('input');
+    chk.checked = a[field].includes(opt);
+    chk.onchange = () => {
+      if(chk.checked){ if(!a[field].includes(opt)) a[field].push(opt); }
+      else { a[field] = a[field].filter(x => x !== opt); }
+      saveAnswers();
+    };
+    box.appendChild(row);
+  });
+}
+function renderBasisList(){
+  renderCheckGroup('basisList', BASIS_OPTIONS, 'basis', 'basis');
+  renderCheckGroup('difficultyList', DIFFICULTY_OPTIONS, 'difficulty', 'diff');
+}
+
+function renderOutcomeState(){
+  const a = curAnswer();
+  document.querySelectorAll('input[name=outcome]').forEach(r => r.checked = (r.value === a.outcome));
+  const step4 = document.getElementById('step4Card');
+  step4.style.display = a.outcome ? '' : 'none';
+}
+
+function renderFormState(){
+  const a = curAnswer();
+  document.querySelectorAll('input[name=ambig]').forEach(r => r.checked = (r.value === a.ambiguity));
+  document.getElementById('notesInput').value = a.notes || '';
+  renderOutcomeState();
+  updateSelBox();
+}
+
+function renderJumpRow(){
+  const row = document.getElementById('jumpRow');
+  row.innerHTML = '';
+  CASES.forEach((c, i) => {
+    const a = answers[c.case_id] || blankAnswer();
+    const b = document.createElement('button');
+    b.textContent = (i+1);
+    b.className = (i === idx ? 'cur' : '');
+    const complete = isComplete(a);
+    const started = a.outcome || a.unit_id;
+    b.style.borderBottomColor = complete ? 'var(--ok)' : (started ? 'var(--warn)' : 'var(--line)');
+    b.onclick = () => { idx = i; renderAll(); };
+    row.appendChild(b);
+  });
+}
+
+function renderProgress(){
+  const done = CASES.filter(c => isComplete(answers[c.case_id] || blankAnswer())).length;
+  document.getElementById('progFill').style.width = (done / CASES.length * 100) + '%';
+  document.getElementById('progCount').textContent = done + ' / ' + CASES.length + ' 完成';
+}
+
+function renderAll(){
+  const c = curCase();
+  const practice = (idx === -1);
+  document.getElementById('addrText').textContent = c.address;
+  document.getElementById('addrRecap').textContent = c.address;
+  document.getElementById('caseIdText').textContent = practice ? '示範案例（不計入正式結果）' : ('案例 ' + (idx+1) + ' / ' + CASES.length);
+  document.getElementById('headerTitle').textContent = practice ? '示範案例' : '道路查報案件人工空間配對驗證';
+  document.getElementById('progressRow').style.display = practice ? 'none' : 'flex';
+  document.getElementById('jumpRow').style.display = practice ? 'none' : 'flex';
+  document.getElementById('exportCard').classList.toggle('hidden', practice || idx !== CASES.length - 1);
+  showExtra = false;
+  document.getElementById('toggleExtraBtn').textContent = '顯示候選清單外單元';
+  renderMap();
+  renderCandList();
+  renderBasisList();
+  renderFormState();
+  if(!practice) renderJumpRow();
+  if(!practice) renderProgress();
+  document.getElementById('prevBtn').disabled = practice;
+  document.getElementById('nextBtn').textContent = practice ? '開始正式 20 筆 →' : ((idx === CASES.length - 1) ? '完成' : '下一筆 →');
+  document.getElementById('exportArea').classList.add('hidden');
+  document.getElementById('copyBtn').classList.add('hidden');
+  document.getElementById('copyStatus').textContent = '';
+  window.scrollTo(0,0);
+}
+
+document.getElementById('toggleExtraBtn').onclick = () => {
+  showExtra = !showExtra;
+  document.getElementById('toggleExtraBtn').textContent = showExtra ? '隱藏候選清單外單元' : '顯示候選清單外單元';
+  renderMap(false); renderCandList();
+};
+document.getElementById('clearSelBtn').onclick = () => {
+  const a = curAnswer();
+  a.unit_id=''; a.road_name=''; a.in_candidate_list=null; a.outcome='';
+  saveAnswers(); renderMap(); renderCandList(); renderFormState();
+};
+document.querySelectorAll('input[name=outcome]').forEach(r => r.onchange = () => {
+  curAnswer().outcome = r.value; saveAnswers(); renderOutcomeState(); renderJumpRow(); renderProgress();
+});
+document.querySelectorAll('input[name=ambig]').forEach(r => r.onchange = () => {
+  curAnswer().ambiguity = r.value; saveAnswers(); renderJumpRow(); renderProgress();
+});
+document.getElementById('notesInput').oninput = (e) => {
+  curAnswer().notes = e.target.value; saveAnswers();
+};
+document.getElementById('prevBtn').onclick = () => { if(idx>0){ idx--; renderAll(); } };
+document.getElementById('nextBtn').onclick = () => {
+  if(idx === -1){ idx = 0; renderAll(); return; }
+  if(idx < CASES.length - 1){ idx++; renderAll(); }
+  else { document.getElementById('exportCard').scrollIntoView({behavior:'smooth'}); }
+};
+
+function buildExportText(){
+  const rows = [["case_id","annotator","tool_version","outcome","judged_road_name","judged_unit_id",
+    "in_candidate_list","has_ambiguity","basis","difficulty","notes","exported_at"]];
+  CASES.forEach(c => {
+    const a = answers[c.case_id] || blankAnswer();
+    rows.push([
+      c.case_id, ANNOTATOR, TOOL_VERSION, a.outcome||'', a.road_name||'', a.unit_id||'',
+      a.in_candidate_list===null?'':(a.in_candidate_list?'TRUE':'FALSE'),
+      a.ambiguity||'', (a.basis||[]).join(';'), (a.difficulty||[]).join(';'),
+      (a.notes||'').replace(/\n/g,' '), new Date().toISOString()
+    ]);
+  });
+  return rows.map(r => r.map(v => {
+    v = String(v);
+    return /[",\n]/.test(v) ? '"' + v.replace(/"/g,'""') + '"' : v;
+  }).join(',')).join('\n');
+}
+document.getElementById('exportBtn').onclick = () => {
+  const txt = buildExportText();
+  const area = document.getElementById('exportArea');
+  area.value = txt;
+  area.classList.remove('hidden');
+  document.getElementById('copyBtn').classList.remove('hidden');
+  const doneCount = CASES.filter(c => isComplete(answers[c.case_id] || blankAnswer())).length;
+  document.getElementById('copyStatus').textContent =
+    doneCount < CASES.length ? ('提醒：目前僅完成 ' + doneCount + ' / ' + CASES.length + ' 筆，仍可先行匯出。') : '全部 20 筆已完成。';
+};
+document.getElementById('copyBtn').onclick = async () => {
+  const area = document.getElementById('exportArea');
+  let ok = false;
+  try{ await navigator.clipboard.writeText(area.value); ok = true; }
+  catch(e){ try{ area.focus(); area.select(); ok = document.execCommand('copy'); }catch(e2){ ok = false; } }
+  document.getElementById('copyStatus').textContent = ok ? '已複製，請貼到 LINE／Email 傳給研究者。' : '複製失敗，請手動全選文字後複製。';
+};
+
+document.getElementById('startBtn').onclick = () => {
+  const v = document.getElementById('nameInput').value.trim();
+  if(!v){ alert('請輸入標註代號'); return; }
+  ANNOTATOR = v;
+  try{ localStorage.setItem('phase2a_v2_last_name', v); }catch(e){}
+  loadAnswers();
+  document.getElementById('setupView').classList.add('hidden');
+  document.getElementById('practiceIntro').classList.remove('hidden');
+};
+document.getElementById('toPracticeBtn').onclick = () => {
+  document.getElementById('practiceIntro').classList.add('hidden');
+  document.getElementById('mainView').classList.remove('hidden');
+  document.getElementById('whoLine').textContent = '標註代號：' + ANNOTATOR + '　｜　工具版本：' + TOOL_VERSION;
+  initMap();
+  idx = -1;
+  renderAll();
+};
+(function(){
+  try{
+    const last = localStorage.getItem('phase2a_v2_last_name');
+    if(last) document.getElementById('nameInput').value = last;
+  }catch(e){}
+})();
+</script>
+</body>
+</html>
