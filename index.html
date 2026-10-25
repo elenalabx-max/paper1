@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>道路查報方案討論</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="top">
+  <h1>道路查報資料應用與在地化路況評估研究 <span>｜方案討論原型（非研究成果）</span></h1>
+  <span id="prov" class="prov sim">示意資料</span>
+  <button id="btnImport" class="noprint">匯入 CSV／GeoJSON</button>
+  <button id="btnPrint" class="noprint">列印／存 PDF</button>
+</header>
+<div class="layout">
+  <nav class="side" id="nav"></nav>
+  <main id="main"></main>
+</div>
+
+<dialog id="dlgImport">
+  <h3 style="margin-top:0">匯入查報資料</h3>
+  <p class="muted">檔案只在瀏覽器內讀取，不會上傳。支援 UTF-8 編碼的 CSV（第一列為欄名）或 GeoJSON（Point）。匯入後畫面上的所有統計都改用匯入資料，示意資料可隨時切回。</p>
+  <input type="file" id="impFile" accept=".csv,.geojson,.json">
+  <div id="impMap"></div>
+  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+    <button id="impSim">切回示意資料</button>
+    <button id="impCancel">取消</button>
+    <button id="impGo" class="primary" disabled>匯入</button>
+  </div>
+</dialog>
+
+<script src="js/roads.js"></script>
+<script src="js/core.js"></script>
+<script src="js/mapview.js"></script>
+<script src="js/content.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
