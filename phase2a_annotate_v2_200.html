@@ -1,0 +1,757 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>道路查報案件人工空間配對驗證（200筆正式版）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+<style>
+:root{
+  --bg:#f7f5f1; --panel:#ffffff; --panel2:#faf8f4; --ink:#2b2824; --ink-dim:#6b6358; --line:#e3ddd2;
+  --accent:#8a4b2e; --accent-ink:#ffffff; --accent-soft:#f1e3d6;
+  --candidate:#3f6e5e; --candidate-fill:#e4efe9; --extra:#8c8578; --extra-fill:#e9e6df;
+  --report:#b23b3b; --report-fill:#f7dede; --pave:#5b84a8;
+  --ok:#3f6e5e; --warn:#b2792f; --bad:#b23b3b;
+  --shadow:0 2px 10px rgba(43,40,36,0.08);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#1c1a17; --panel:#272421; --panel2:#2e2a26; --ink:#ece7df; --ink-dim:#aba497; --line:#433e37;
+    --accent:#e0a375; --accent-ink:#1c1a17; --accent-soft:#3a2c21;
+    --candidate:#7fbfa5; --candidate-fill:#20352c; --extra:#9b9384; --extra-fill:#332f29;
+    --report:#e08080; --report-fill:#3a2424; --pave:#7fa8cc;
+    --ok:#7fbfa5; --warn:#e0b968; --bad:#e08080;
+    --shadow:0 2px 10px rgba(0,0,0,0.3);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#1c1a17; --panel:#272421; --panel2:#2e2a26; --ink:#ece7df; --ink-dim:#aba497; --line:#433e37;
+  --accent:#e0a375; --accent-ink:#1c1a17; --accent-soft:#3a2c21;
+  --candidate:#7fbfa5; --candidate-fill:#20352c; --extra:#9b9384; --extra-fill:#332f29;
+  --report:#e08080; --report-fill:#3a2424; --pave:#7fa8cc;
+  --ok:#7fbfa5; --warn:#e0b968; --bad:#e08080;
+  --shadow:0 2px 10px rgba(0,0,0,0.3);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans TC",system-ui,sans-serif;}
+body{padding:0 0 90px;max-width:620px;margin:0 auto;min-height:100vh;}
+.mono{font-family:"IBM Plex Mono",monospace;}
+header{padding:14px 16px 10px;position:sticky;top:0;background:var(--bg);z-index:5;border-bottom:1px solid var(--line);}
+h1{font-size:16px;margin:0 0 2px;font-weight:700;}
+.sub{font-size:12px;color:var(--ink-dim);}
+.progress{display:flex;align-items:center;gap:8px;margin-top:8px;}
+.progress .bar{flex:1;height:6px;background:var(--line);border-radius:4px;overflow:hidden;}
+.progress .fill{height:100%;background:var(--accent);border-radius:4px;transition:width .2s;}
+.progress .count{font-size:12px;color:var(--ink-dim);white-space:nowrap;}
+.jumpbar{display:flex;align-items:center;gap:6px;margin-top:8px;}
+.jumpbar input[type=number]{width:60px;padding:5px 6px;border:1px solid var(--line);border-radius:7px;
+  background:var(--panel2);color:var(--ink);font-size:12px;font-family:"IBM Plex Mono",monospace;}
+.jumpbar .btn{padding:5px 10px;font-size:12px;}
+.jumprow{display:flex;gap:5px;margin-top:8px;overflow-x:auto;padding-bottom:4px;}
+.jumprow button{flex-shrink:0;width:26px;height:26px;border-radius:6px;border:1px solid var(--line);background:var(--panel2);
+  font-size:10px;color:var(--ink-dim);cursor:pointer;font-family:"IBM Plex Mono",monospace;border-bottom-width:3px;}
+.jumprow button.cur{border-color:var(--accent);color:var(--accent);font-weight:700;}
+main{padding:12px 16px;}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:var(--shadow);}
+.card h2{font-size:12px;margin:0 0 8px;color:var(--ink-dim);font-weight:700;letter-spacing:.03em;display:flex;align-items:center;gap:6px;}
+.stepnum{width:20px;height:20px;border-radius:50%;background:var(--accent);color:var(--accent-ink);
+  display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;}
+.addr{font-size:15px;font-weight:600;line-height:1.5;}
+.caseid{font-size:12px;color:var(--ink-dim);margin-top:2px;}
+.addrrecap{font-size:13px;font-weight:600;color:var(--ink);background:var(--panel2);padding:8px 10px;
+  border-radius:8px;margin-top:10px;display:flex;gap:8px;align-items:baseline;}
+.addrrecap .lbl{font-size:11px;font-weight:700;color:var(--ink-dim);flex-shrink:0;}
+.mapwrap2{position:relative;}
+#map{height:340px;border-radius:10px;border:1px solid var(--line);background:#ddd;}
+.maplock{position:absolute;inset:0;z-index:1000;background:rgba(43,40,36,.38);border-radius:10px;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.maplock span{background:var(--panel);color:var(--ink);padding:10px 16px;border-radius:9px;font-size:13px;
+  font-weight:700;box-shadow:var(--shadow);}
+.loadingwrap{position:absolute;inset:0;z-index:1001;background:var(--panel2);border-radius:10px;
+  display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--ink-dim);}
+.leaflet-popup-content{font-family:"Noto Sans TC",sans-serif;font-size:13px;}
+.legend{display:flex;gap:12px;font-size:11px;color:var(--ink-dim);margin-top:8px;flex-wrap:wrap;}
+.legend span{display:inline-flex;align-items:center;gap:5px;}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block;}
+.dot.c{background:var(--candidate-fill);border:2px solid var(--candidate);}
+.dot.e{background:var(--extra-fill);border:2px solid var(--extra);}
+.dot.r{background:var(--report);}
+.sw{width:14px;height:10px;background:var(--pave);opacity:.45;border:1px solid var(--pave);display:inline-block;}
+.togglebar{display:flex;align-items:center;justify-content:space-between;margin-top:8px;gap:8px;}
+.togglebar .btn{flex-shrink:0;}
+.candlist{display:flex;flex-direction:column;gap:6px;margin-top:10px;max-height:260px;overflow-y:auto;}
+.crow{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;cursor:pointer;background:var(--panel2);}
+.crow.sel{border-color:var(--accent);background:var(--accent-soft);}
+.crow.extra{opacity:.85;}
+.crow .badge{width:22px;height:22px;border-radius:50%;background:var(--candidate-fill);color:var(--candidate);
+  display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;}
+.crow.extra .badge{background:var(--extra-fill);color:var(--extra);}
+.crow.sel .badge{background:var(--accent);color:var(--accent-ink);}
+.crow .rname{font-size:13.5px;font-weight:600;}
+.crow .rid{font-size:11px;color:var(--ink-dim);}
+.crow .tag{font-size:10px;padding:1px 6px;border-radius:5px;background:var(--extra-fill);color:var(--ink-dim);margin-left:auto;flex-shrink:0;}
+.selbox{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:10px;
+  background:var(--accent-soft);border:1px solid var(--accent);margin-top:10px;}
+.selbox.empty{background:var(--panel2);border-color:var(--line);color:var(--ink-dim);}
+.selbox .lbl{font-size:11px;color:var(--ink-dim);}
+.selbox .val{font-size:14px;font-weight:700;}
+.btn{border:1px solid var(--line);background:var(--panel2);color:var(--ink);border-radius:9px;padding:9px 14px;
+  font-size:13px;font-weight:600;cursor:pointer;}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);}
+.btn.ghost{background:transparent;}
+.btn.sm{padding:6px 10px;font-size:12px;}
+.btn:disabled{opacity:.4;cursor:not-allowed;}
+.help{font-size:12px;color:var(--ink-dim);background:var(--panel2);border-radius:8px;padding:8px 10px;margin:6px 0 10px;line-height:1.55;}
+.help.tip{background:var(--accent-soft);border:1px dashed var(--accent);color:var(--ink);}
+.radiorow{display:flex;gap:8px;flex-wrap:wrap;}
+.radiorow label{flex:1;min-width:84px;text-align:center;padding:9px 6px;border:1px solid var(--line);border-radius:9px;
+  font-size:12.5px;font-weight:600;cursor:pointer;background:var(--panel2);}
+.radiorow input{display:none;}
+.radiorow label:has(input:checked){background:var(--accent);color:var(--accent-ink);border-color:var(--accent);}
+.radiorow.outcome label{min-width:auto;flex:1 1 100%;text-align:left;padding:10px 12px;}
+textarea,input[type=text]{width:100%;border:1px solid var(--line);border-radius:9px;padding:9px 10px;font-size:13.5px;
+  background:var(--panel2);color:var(--ink);font-family:inherit;}
+textarea{min-height:60px;resize:vertical;}
+.field{margin-bottom:14px;}
+.field > .flabel{font-size:13px;font-weight:700;margin-bottom:6px;display:block;}
+.check{display:flex;align-items:flex-start;gap:8px;padding:6px 2px;}
+.check input{margin-top:3px;width:17px;height:17px;flex-shrink:0;}
+.check label{font-size:13.5px;line-height:1.4;}
+footer.nav{position:fixed;bottom:0;left:0;right:0;background:var(--panel);border-top:1px solid var(--line);
+  padding:10px 16px calc(10px + env(safe-area-inset-bottom));display:flex;gap:10px;max-width:620px;margin:0 auto;z-index:6;}
+footer.nav .btn{flex:1;}
+.setup{padding:30px 20px;}
+.setup .card{max-width:440px;margin:0 auto;}
+.hidden{display:none !important;}
+.exportarea{width:100%;min-height:160px;font-family:"IBM Plex Mono",monospace;font-size:11px;}
+.smallnote{font-size:11.5px;color:var(--ink-dim);margin-top:6px;line-height:1.5;}
+.practicebadge{display:inline-block;background:var(--warn);color:#fff;font-size:11px;font-weight:700;padding:2px 8px;
+  border-radius:6px;margin-bottom:8px;}
+.warnbadge{display:inline-block;background:var(--bad);color:#fff;font-size:11px;font-weight:700;padding:2px 8px;
+  border-radius:6px;margin-bottom:8px;}
+</style>
+</head>
+<body>
+
+<div id="setupView" class="setup">
+  <div class="card">
+    <h2 style="font-size:13px;">道路查報案件人工空間配對驗證（200筆正式版）</h2>
+    <p style="font-size:14px;line-height:1.7;margin-top:0;">
+      這是 Paper 1 研究的一部分：請依據<b>道路損壞查報案件的地址、位置資訊</b>及<b>道路圖資</b>，
+      判斷每筆案件最可能對應的道路及道路單元，並記錄您的判斷證據是否充分。
+    </p>
+    <p style="font-size:14px;line-height:1.7;">
+      若現有資訊不足以確認特定道路單元，請依實際情況選擇「暫定候選道路單元」或「無法判定道路單元」，
+      <b>不需要勉強選出答案</b>。系統提供的候選清單僅供參考，請同時檢視地圖上的其他道路單元。
+    </p>
+    <p style="font-size:13px;line-height:1.6;color:var(--ink-dim);">
+      開始前會先有一筆<b>示範案例</b>（不計入正式結果），帶您熟悉地圖操作與各欄位意義，之後才進入正式 200 筆。
+      這批 200 筆裡包含您先前已填過的 20 筆試標案例，請一樣依現有資訊獨立判斷，不需要刻意回想先前的答案。
+    </p>
+    <div class="field">
+      <label class="flabel" for="nameInput">標註代號</label>
+      <input type="text" id="nameInput" placeholder="例如：annotatorA">
+    </div>
+    <button class="btn primary" id="startBtn" style="width:100%;">開始示範案例</button>
+    <p class="smallnote">本頁為 200 筆正式版（與 20 筆試標版是不同工具／不同資料，兩者分開儲存）。每筆案例的地圖資料是連線即時下載，需要網路連線；作答本身儲存在您這支裝置的瀏覽器中。</p>
+  </div>
+</div>
+
+<div id="practiceIntro" class="hidden setup">
+  <div class="card">
+    <span class="practicebadge">示範案例・不計入正式結果</span>
+    <h2 style="font-size:13px;">地圖操作與名詞說明</h2>
+    <div class="help tip">
+      <b>道路名稱</b> vs <b>道路單元</b>：同一條路（例如「中山北路二段」）會被切成很多小段「道路單元」，
+      每個單元有自己的編號（單元ID）。您有時能確定是哪一條路，但不一定能確定是哪一個單元——這兩者請分開判斷。
+    </div>
+    <div class="help tip">
+      地圖上的<b>藍色色塊</b>是道路鋪面範圍圖資（政府道路鋪面測量範圍，供參考，不代表單一道路單元的精確邊界），
+      <b>綠色圓點</b>是系統原本提供的候選道路單元，<b>灰色圓點</b>是候選清單以外、但在附近範圍內的其他道路單元
+      （需要按「顯示候選清單外單元」才會出現），<b>紅點</b>是查報地點。
+    </div>
+    <div class="help tip">
+      候選清單（綠點）只是系統篩選的結果，<b>不代表正確答案</b>。如果您判斷正確答案不在候選清單中，可以直接點選
+      灰色的清單外單元；如果連灰色清單中也找不到、或範圍內完全沒有合理答案，可以在地圖上自由平移到更遠處尋找，
+      找不到的話就記錄「無法判定道路單元」，不需要勉強選一個答案。
+    </div>
+    <button class="btn primary" id="toPracticeBtn" style="width:100%;">進入示範案例</button>
+  </div>
+</div>
+
+<div id="mainView" class="hidden">
+<header>
+  <h1 id="headerTitle">道路查報案件人工空間配對驗證</h1>
+  <div class="sub mono" id="whoLine"></div>
+  <div class="progress" id="progressRow">
+    <div class="bar"><div class="fill" id="progFill"></div></div>
+    <div class="count mono" id="progCount"></div>
+  </div>
+  <div class="jumpbar" id="jumpBar">
+    <input type="number" id="jumpInput" min="1" max="200" placeholder="筆數">
+    <button class="btn sm" id="jumpGoBtn">跳至</button>
+  </div>
+  <div class="jumprow" id="jumpRow"></div>
+</header>
+
+<main>
+  <div class="card">
+    <h2><span class="stepnum">1</span>確認查報位置</h2>
+    <div class="addr" id="addrText"></div>
+    <div class="caseid mono" id="caseIdText"></div>
+    <p class="smallnote">請確認下方地圖上的紅點是否與這個地址描述的位置相符，再進行下一步判讀。</p>
+  </div>
+
+  <div class="card">
+    <h2><span class="stepnum">2</span>在地圖上辨識道路單元</h2>
+    <div class="mapwrap2">
+      <div id="map"></div>
+      <div class="maplock hidden" id="mapLock"><span>點一下以操作地圖（平移／縮放）</span></div>
+      <div class="loadingwrap hidden" id="loadingWrap">載入案例資料中…</div>
+    </div>
+    <div class="addrrecap"><span class="lbl">查報地址</span><span id="addrRecap"></span></div>
+    <div class="selbox empty" id="selBox">
+      <div><div class="lbl">目前選擇</div><div class="val" id="selVal">尚未選擇</div></div>
+      <button class="btn ghost sm" id="clearSelBtn">清除</button>
+    </div>
+    <div class="legend">
+      <span><span class="dot r"></span>查報地點</span>
+      <span><span class="dot c"></span>候選清單內單元</span>
+      <span><span class="dot e"></span>候選清單外單元</span>
+      <span><span class="sw"></span>道路鋪面範圍</span>
+    </div>
+    <p class="smallnote">候選清單是系統先篩選出的結果，<b>不代表正確答案</b>，請同時查看地圖上其他道路單元再做判斷。地圖可自由平移、縮放，不限於初始範圍；點選圓點或清單列即可選取，點選藍色路面色塊可查看道路名稱。</p>
+    <div class="togglebar">
+      <button class="btn sm" id="toggleExtraBtn" style="margin-left:auto;">顯示候選清單外單元</button>
+    </div>
+    <div class="candlist" id="candList"></div>
+  </div>
+
+  <div class="card">
+    <h2><span class="stepnum">3</span>選擇判定結果</h2>
+    <p class="smallnote" style="margin-top:0;">請依據查報地址、位置資訊及道路圖資，選擇最符合本案的判定結果。</p>
+    <div class="radiorow outcome" id="outcomeRow">
+      <label><input type="radio" name="outcome" value="confirmed"><span><b>已確認道路單元</b><br>現有資訊足以確認案件對應的特定道路單元。</span></label>
+      <label><input type="radio" name="outcome" value="tentative"><span><b>暫定候選道路單元</b><br>可以選出最可能的道路單元，但仍缺乏足夠資訊確認。</span></label>
+      <label><input type="radio" name="outcome" value="undetermined"><span><b>無法判定道路單元</b><br>無法根據現有資訊選出特定道路單元。</span></label>
+    </div>
+  </div>
+
+  <div class="card" id="step4Card">
+    <h2><span class="stepnum">4</span>記錄歧義與判定依據</h2>
+
+    <div class="field">
+      <span class="flabel">是否存在道路單元判定歧義？（單選）</span>
+      <p class="smallnote" style="margin-top:0;">請依查報資訊及地圖上可辨識的道路單元進行判斷。本題與前述「判定結果」分別評估——即使已選定最可能的道路單元，若仍有其他合理候選，也應勾選「有歧義」。</p>
+      <div class="radiorow outcome">
+        <label><input type="radio" name="ambig" value="是"><span><b>有歧義</b><br>存在兩個以上合理候選道路單元，無法明確排除其他候選。</span></label>
+        <label><input type="radio" name="ambig" value="否"><span><b>無歧義</b><br>現有資訊足以確認只有一個合理候選道路單元。</span></label>
+        <label><input type="radio" name="ambig" value="無法判斷"><span><b>資訊不足，無法判斷</b><br>現有資訊不足以判斷是否存在其他合理候選道路單元。</span></label>
+      </div>
+    </div>
+
+    <div class="field" id="basisField">
+      <span class="flabel">判定依據（可複選）</span>
+      <p class="smallnote" style="margin-top:0;">請依實際使用的判斷依據勾選；僅有查報點距離較近，不代表已確認道路單元。</p>
+      <div id="basisList"></div>
+    </div>
+
+    <div class="field" id="difficultyField">
+      <span class="flabel">判定困難或限制（可複選）</span>
+      <p class="smallnote" style="margin-top:0;">若有無法確認或存在歧義的情形，請勾選主要原因；沒有則可不勾選。</p>
+      <div id="difficultyList"></div>
+    </div>
+
+    <div class="field">
+      <label class="flabel" for="notesInput">補充說明（選填）</label>
+      <textarea id="notesInput" placeholder="如有多個合理候選、地址與地圖不一致，或無法確認道路單元，請簡述主要原因。"></textarea>
+    </div>
+  </div>
+
+  <div class="card hidden" id="exportCard">
+    <h2>匯出結果</h2>
+    <p class="smallnote">填完 200 筆正式案例後，按下方按鈕產生結果文字，複製後傳給研究者即可。示範案例不會被匯出。未完成的案例也會一併輸出，欄位留空。</p>
+    <button class="btn primary" id="exportBtn" style="width:100%;margin-bottom:8px;">產生匯出結果</button>
+    <textarea class="exportarea hidden" id="exportArea" readonly></textarea>
+    <button class="btn hidden" id="copyBtn" style="width:100%;margin-top:8px;">複製全部結果</button>
+    <div class="smallnote" id="copyStatus"></div>
+  </div>
+</main>
+
+<footer class="nav">
+  <button class="btn" id="prevBtn">← 上一筆</button>
+  <button class="btn primary" id="nextBtn">下一筆 →</button>
+</footer>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script>
+const CASE_INDEX = [{"case_id": "111012009483.0", "address": "中山區新生北路1段164號"}, {"case_id": "111012509822.0", "address": "中山區長安東路1段53巷19號"}, {"case_id": "111012605518.0", "address": "中山區龍江路356巷86號對面-001"}, {"case_id": "111012702203.0", "address": "中山區明水路526巷口本線側-001"}, {"case_id": "111012808906.0", "address": "中山區中山北路1段130號"}, {"case_id": "111013103638.0", "address": "中山區中山北路2段37號023"}, {"case_id": "111020700218.0", "address": "中山區崇實路135號"}, {"case_id": "111020800103.0", "address": "中山區中山區農安街227-1號"}, {"case_id": "111021302505.0", "address": "中山區渭水路38號-10"}, {"case_id": "111030202628.0", "address": "中山區德惠街167巷29號-006"}, {"case_id": "111030601690.0", "address": "中山區吉林路150-2號"}, {"case_id": "111031106701.0", "address": "中山區中山北路4段1巷1號"}, {"case_id": "111032106514.0", "address": "中山區中山北路2段68號"}, {"case_id": "111041201735.0", "address": "中山區復興北路56號-15"}, {"case_id": "111042809895.0", "address": "中山區中山?中原街48號2樓"}, {"case_id": "111050206109.0", "address": "中山區基湖路112號"}, {"case_id": "111050501714.0", "address": "中山區南京東路2段2-10號"}, {"case_id": "111052902817.0", "address": "中山區長安東路2段94號-32"}, {"case_id": "111070303011.0", "address": "中山區建國北路2段96號081"}, {"case_id": "111090300613.0", "address": "中山區德惠街3巷1號"}, {"case_id": "111090505722.0", "address": "中山區民生東路1段28號"}, {"case_id": "111090806137.0", "address": "中山區雙城街47號"}, {"case_id": "111091608108.0", "address": "中山區濱江街132號"}, {"case_id": "111092807036.0", "address": "中山區龍江路102號"}, {"case_id": "111093004911.0", "address": "中山區渭水路3巷4號"}, {"case_id": "111100307626.0", "address": "中山區建國北路1段65號"}, {"case_id": "111100802205.0", "address": "中山區南京東路3段22號"}, {"case_id": "111101904978.0", "address": "中山區中山北路3段36巷10號"}, {"case_id": "111111411573.0", "address": "中山區南京東路3段89巷5弄2號"}, {"case_id": "111112004189.0", "address": "中山區中山北路2段139號"}, {"case_id": "111112406513.0", "address": "中山區合江街162-1號"}, {"case_id": "111121103239.0", "address": "中山區八德路2段220號"}, {"case_id": "111122302054.0", "address": "中山區一江街21號"}, {"case_id": "111122803128.0", "address": "中山區復興南路1段4號"}, {"case_id": "112010306611.0", "address": "中山區中山北路1段88號"}, {"case_id": "112011401233.0", "address": "中山區長安西路19巷22弄18號"}, {"case_id": "112011403457.0", "address": "中山區龍江路182號"}, {"case_id": "112013106421.0", "address": "中山區中山北路1段112號"}, {"case_id": "112021609204.0", "address": "中山區新生北路2段29號"}, {"case_id": "112021804661.0", "address": "中山區基湖路120號"}, {"case_id": "112021806388.0", "address": "中山區堤頂大道2段456號"}, {"case_id": "112022403173.0", "address": "中山區新生北路3段43號"}, {"case_id": "112040301036.0", "address": "中山區北安路811-1號"}, {"case_id": "112041200873.0", "address": "中山區復興北路226號"}, {"case_id": "112041400606.0", "address": "中山區松江路170巷2-1號"}, {"case_id": "112050204206.0", "address": "中山區大直街83號"}, {"case_id": "112051107290.0", "address": "中山區民生東路1段4號"}, {"case_id": "112051111838.0", "address": "中山區復興北路448-2號"}, {"case_id": "112052704253.0", "address": "中山區中山北路2段37之1號"}, {"case_id": "112053002538.0", "address": "中山區建國北路3段110號"}, {"case_id": "112061200251.0", "address": "中山區長春路41號"}, {"case_id": "112062403473.0", "address": "中山區敬業三路11號"}, {"case_id": "112070100907.0", "address": "中山區敬業三路129號"}, {"case_id": "112070301987.0", "address": "中山區南京東路2段192-3號"}, {"case_id": "112072100747.0", "address": "中山區復興北路280號"}, {"case_id": "112073100351.0", "address": "中山區松江路70號"}, {"case_id": "112100500509.0", "address": "臺北市中山區興亞里22鄰吉林路12之2號"}, {"case_id": "112100507281.0", "address": "臺北市中山區江寧里7鄰合江街188巷1號"}, {"case_id": "112100507683.0", "address": "臺北市中山區永安里22鄰明水路457號"}, {"case_id": "112112205454.0", "address": "臺北市中山區行孝里12鄰建國北路三段113巷1號"}, {"case_id": "112112209821.0", "address": "104台灣台北市中山區中山北路二段128號往南市民大道一段方向第二車道"}, {"case_id": "112120502153.0", "address": "114台北市中山區北安路843號"}, {"case_id": "112120502167.0", "address": "104台北市中山區復興北路268號"}, {"case_id": "112120505040.0", "address": "臺北市中山區復興北路476號"}, {"case_id": "112120505727.0", "address": "10491台灣台北市中山區民生西路45巷1號"}, {"case_id": "112120506005.0", "address": "10491台北市中山區龍江路120巷往西與南京東路三段89巷交叉口"}, {"case_id": "113011105509.0", "address": "10491台灣台北市中山區中山北路二段96號"}, {"case_id": "113011109015.0", "address": "10472台北市中山區濱江街209號"}, {"case_id": "113011109839.0", "address": "10491台北市中山區濱江街163號"}, {"case_id": "113011110914.0", "address": "104台灣台北市中山區敬業一路128號"}, {"case_id": "113020200976.0", "address": "10491台灣台北市中山區明水路443號"}, {"case_id": "113020201064.0", "address": "10491台灣台北市中山區復興北路10號"}, {"case_id": "113020201362.0", "address": "臺北市中山區金泰里14鄰植福路166號"}, {"case_id": "113020205251.0", "address": "臺北市中山區復興北路476號"}, {"case_id": "113022005398.0", "address": "中山區松江路473號"}, {"case_id": "113030602992.0", "address": "臺北市中山區民權東路三段往西，要右轉往建國北路三段，有建國高架停車場告示牌的人行號誌燈前，斑馬線前，第四車道"}, {"case_id": "113030605336.0", "address": "臺北市中山區樂群三路往西在敬業四路路牌下方前10公尺第2車道"}, {"case_id": "113030608938.0", "address": "臺北市中山區龍洲里1鄰復興北路184號"}, {"case_id": "113032000497.0", "address": "中山區樂群二路往東近樂群二路266巷口"}, {"case_id": "113040302295.0", "address": "10491台灣台北市中山區吉林路75號"}, {"case_id": "113040309691.0", "address": "臺北市中山區農安街123號"}, {"case_id": "113040310524.0", "address": "臺北市中山區基湖路往南在大直路路牌前2公尺第1車道"}, {"case_id": "113042301550.0", "address": "中山區中原街112號"}, {"case_id": "113050200674.0", "address": "臺北市中山區五常街53巷往北，與龍江路384巷交口，黃色網格上"}, {"case_id": "113050209089.0", "address": "10491台灣台北市中山區民權東路三段60巷4號"}, {"case_id": "113050216765.0", "address": "臺北市中山區長安東路2段36巷往北長安東路2段交叉路口斑馬線前方第1車道"}, {"case_id": "113051210882.0", "address": "中山區濱江街103號"}, {"case_id": "113070403560.0", "address": "臺北市中山區復興北路476號"}, {"case_id": "113070404977.0", "address": "104臺北市中山區吉林路403號"}, {"case_id": "113070407167.0", "address": "10491台灣台北市中山區明水路443號"}, {"case_id": "113070411334.0", "address": "台北市中山區林森北路72號"}, {"case_id": "113071102087.0", "address": "中山區復興北路516號"}, {"case_id": "113080205324.0", "address": "臺北市中山區樂群一路往東，與敬業三路路口，第二車道"}, {"case_id": "113080208230.0", "address": "台北市中山區樂群三路301號對面"}, {"case_id": "113080211665.0", "address": "台北市中山區濱江街303號"}, {"case_id": "113080213048.0", "address": "臺北市中山區朱馥里20鄰合江街15號"}, {"case_id": "113080214753.0", "address": "10491台灣台北市中山區朱崙街25號"}, {"case_id": "113080217077.0", "address": "104台北市中山區林森北路615號"}, {"case_id": "113080217541.0", "address": "104台灣台北市中山區朱崙街33號"}, {"case_id": "113080219470.0", "address": "臺北市中山區長安東路二段36巷1號"}, {"case_id": "113080222256.0", "address": "臺北市中山區民安里16鄰民生西路66巷1號"}, {"case_id": "113080225921.0", "address": "104台北市中山區中山北路四段往南過圓山隧道80公尺第二車道"}, {"case_id": "113090410282.0", "address": "台北市中山區龍江路116號對向"}, {"case_id": "113090412206.0", "address": "台北市中山區長春路90號"}, {"case_id": "113090414113.0", "address": "台北市中山區長安東路一段22-1號"}, {"case_id": "113090418565.0", "address": "臺北市中山區永安里6鄰北安路518巷1號"}, {"case_id": "113090418681.0", "address": "台北市中山區明水路678號"}, {"case_id": "113100802015.0", "address": "中山區錦州街441號"}, {"case_id": "113100802047.0", "address": "中山區錦州街15號"}, {"case_id": "113100906870.0", "address": "台北市中山區民權東路二段94號"}, {"case_id": "113100910812.0", "address": "臺北市中山區松江里18鄰建國北路二段216號"}, {"case_id": "113100916656.0", "address": "臺北市中山區吉林路14巷1號"}, {"case_id": "113100920078.0", "address": "台北市中山區新生高架道路往南037號燈桿後30公尺"}, {"case_id": "113110401393.0", "address": "台北市中山區復興北路286號"}, {"case_id": "113110407246.0", "address": "台北市中山區南京東路二段63號"}, {"case_id": "113110412748.0", "address": "台北市中山區北安路556號"}, {"case_id": "113112707757.0", "address": "中山區民族東路2號6樓"}, {"case_id": "113120306967.0", "address": "臺北市中山區北安路往東敬業三路路口"}, {"case_id": "113120309426.0", "address": "台北市中山區中山北路二段41號"}, {"case_id": "113120312021.0", "address": "10491台北市中山區復興北路往南八德路二段交岔口"}, {"case_id": "113120312090.0", "address": "104臺北市中山區復興北路184號"}, {"case_id": "113120314108.0", "address": "104台北市中山區龍江路170號"}, {"case_id": "114010302250.0", "address": "台北市中山區復興北路438號"}, {"case_id": "114010309692.0", "address": "台北市中山區北安路586號"}, {"case_id": "114011604212.0", "address": "中山區中原街125-2號"}, {"case_id": "114020305321.0", "address": "台北市中山區中山北路二段46號"}, {"case_id": "114020305906.0", "address": "台北市中山區敬業四路1號"}, {"case_id": "114020306965.0", "address": "臺北市中山區敬業三路173號"}, {"case_id": "114020308053.0", "address": "台北市中山區明水路607號"}, {"case_id": "114020316012.0", "address": "台北市中山區新生北路二段139號"}, {"case_id": "114020316087.0", "address": "台北市中山區中山北路四段往南過圓山隧道210公尺第1車道"}, {"case_id": "114020316956.0", "address": "台北市中山區民生東路三段10號"}, {"case_id": "114020807552.0", "address": "中山區吉林路301號"}, {"case_id": "114022306665.0", "address": "中山區合江街107號"}, {"case_id": "114030316058.0", "address": "台北市中山區民族西路往東撫順街41巷交叉路口中間第3車道"}, {"case_id": "114030317503.0", "address": "台北市中山區民族東路108號"}, {"case_id": "114040107074.0", "address": "台北市中山區中山北路二段71號"}, {"case_id": "114040109036.0", "address": "臺北市中山區農安街62號"}, {"case_id": "114040111046.0", "address": "台北市中山區民生東路二段往東過松江路30米"}, {"case_id": "114040111969.0", "address": "臺北市中山區市民大道二段往西與林森北路交叉口第二車道"}, {"case_id": "114040116922.0", "address": "台北市中山區松江路85巷5號"}, {"case_id": "114050517183.0", "address": "台北市中山區新生高架往南伸縮縫新生058後方"}, {"case_id": "114050522856.0", "address": "台北市中山區林森北路438號"}, {"case_id": "114050525618.0", "address": "台北市中山區南京東路二段150號"}, {"case_id": "114050528675.0", "address": "臺北市中山區民生東路一段70號"}, {"case_id": "114050529489.0", "address": "台北市中山區長春路68號"}, {"case_id": "114050531696.0", "address": "台北市中山區復興北路150號"}, {"case_id": "114060300320.0", "address": "台北市中山區新生北路二段118號對向第一車道"}, {"case_id": "114060305588.0", "address": "台北市中山區興安街97號"}, {"case_id": "114060317155.0", "address": "台北市中山區松江路往北過民權東路斑馬線前20米第二車道"}, {"case_id": "114060317570.0", "address": "台北市中山區民族東路566號對面第1車道"}, {"case_id": "114070302119.0", "address": "台北市中山區遼寧街15號"}, {"case_id": "114070302617.0", "address": "台北市中山區中原街138號"}, {"case_id": "114070304515.0", "address": "臺北市中山區北安路456號"}, {"case_id": "114070310671.0", "address": "台北市中山區復興北路446號"}, {"case_id": "114080405270.0", "address": "台北市中山區松江路往北明生東路2段交叉路口中間第1車道"}, {"case_id": "114080406535.0", "address": "台北市中山區林森北路380號"}, {"case_id": "114080414262.0", "address": "臺北市中山區建國北路三段86巷1號"}, {"case_id": "114080415914.0", "address": "台北市中山區松江路506號"}, {"case_id": "114081205365.0", "address": "中山區新生北路2段與新生北路2段28巷交叉口"}, {"case_id": "114090214188.0", "address": "臺北市中山區新生北路一段往北南京東路二段交叉路口中間第2車道"}, {"case_id": "114090219746.0", "address": "台北市中山區德惠街186號"}, {"case_id": "114090221018.0", "address": "台北市中山區濱江街197號"}, {"case_id": "114092700671.0", "address": "中山區北安路456號"}, {"case_id": "114100215247.0", "address": "台北市中山區遼寧街130號"}, {"case_id": "114100217925.0", "address": "臺北市中山區通北街138號"}, {"case_id": "114100218874.0", "address": "台北市中山區樂群一路往東過敬業三路交叉路口前方451m第2車道"}, {"case_id": "114110318801.0", "address": "台北市中山區龍江路181-1號"}, {"case_id": "114110318812.0", "address": "台北市中山區民族東路512巷19號"}, {"case_id": "114111304951.0", "address": "中山區民生東路2段122號"}, {"case_id": "114120608693.0", "address": "中山區合江街104號"}, {"case_id": "114121210865.0", "address": "中山區樂群三路299號對面"}, {"case_id": "115010915145.0", "address": "台北市中山區長安東路二段154號"}, {"case_id": "115010915266.0", "address": "台北市中山區南京東路三段224號"}, {"case_id": "115010917226.0", "address": "台北市中山區大直街31號"}, {"case_id": "115010918693.0", "address": "台北市中山區吉林路176號"}, {"case_id": "115012911267.0", "address": "中山區松江路194巷2號"}, {"case_id": "115020316847.0", "address": "台北市中山區新生北路三段158號"}, {"case_id": "115020322047.0", "address": "台北市中山區龍江路296號"}, {"case_id": "115020323841.0", "address": "台北市中山區松江路49號"}, {"case_id": "115030207865.0", "address": "台北市中山區長安東路二段254號對向第一車道"}, {"case_id": "115030210344.0", "address": "台北市中山區樂群二路往東樂群二路30巷交叉路口中間第2車道"}, {"case_id": "115032318898.0", "address": "中山區龍江路104號"}, {"case_id": "115040206473.0", "address": "台北市中山區林森北路478號"}, {"case_id": "115040207086.0", "address": "臺北市中山區長安東路一段30之2號"}, {"case_id": "115040209240.0", "address": "台北市中山區民生東路二段149號"}, {"case_id": "115042214018.0", "address": "中山區遼寧街17號"}, {"case_id": "115042421393.0", "address": "中山區民生東路1段28號"}, {"case_id": "115050304859.0", "address": "台北市中山區遼寧街143號"}, {"case_id": "115050305996.0", "address": "臺北市中山區吉林路14巷1號對向"}, {"case_id": "115050308100.0", "address": "台北市中山區濱江街303號"}, {"case_id": "115052118505.0", "address": "中山區松江路194巷18號"}, {"case_id": "115060303982.0", "address": "台北市中山區復興北路178號"}, {"case_id": "115060305039.0", "address": "台北市中山區遼寧街50號"}, {"case_id": "115060306754.0", "address": "臺北市中山區合江街35號"}, {"case_id": "115060510372.0", "address": "中山區民安里中山北路2段16巷15號"}, {"case_id": "115062924031.0", "address": "中山區行仁里龍江路356巷32號"}, {"case_id": "115070110018.0", "address": "中山區力行里復興北路62之2號"}, {"case_id": "115070814777.0", "address": "中山區江山里龍江路233號"}, {"case_id": "115081711655.0", "address": "中山區下埤里民族東路514號"}];
+const DATA_DIR = "phase2a_v2_200_data";
+const TOOL_VERSION = "v2-200-2026-10-25";
+
+const BASIS_OPTIONS = [
+  "查報地址的道路名稱與所選道路一致",
+  "查報座標位置與所選道路單元相符",
+  "門牌號碼或地址範圍可對應至所選道路單元",
+  "查報地點描述可協助確認道路位置",
+  "其他（請於補充說明填寫）"
+];
+const DIFFICULTY_OPTIONS = [
+  "查報地址或位置描述不夠明確",
+  "查報地址與地圖位置不一致",
+  "多條道路均可能符合查報位置",
+  "同一道路有多個相近單元，難以區分",
+  "道路單元圖資或位置精度不足以判定",
+  "其他（請於補充說明填寫）"
+];
+
+const TILE_URL = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}";
+const TILE_ATTRIB = "Tiles &copy; Esri";
+
+let ANNOTATOR = "";
+let idx = -1; // -1 = practice case (reuses CASE_INDEX[0]'s real data)
+let answers = {};
+let map = null;
+let layerGroup = null;
+let extraCluster = null;
+let showExtra = false;
+let markerById = {};
+let mapActivated = false;
+let caseCache = {};      // case_id -> full case object (units/polygons/report_lat/lon)
+let caseInflight = {};   // case_id -> in-flight fetch promise
+
+function storageKey(){ return "phase2a_v2_200_annot_" + ANNOTATOR; }
+function loadAnswers(){
+  try{
+    const raw = localStorage.getItem(storageKey());
+    answers = raw ? JSON.parse(raw) : {};
+  }catch(e){ answers = {}; }
+}
+function saveAnswers(){
+  try{ localStorage.setItem(storageKey(), JSON.stringify(answers)); }catch(e){}
+}
+function blankAnswer(){
+  return {outcome:"", unit_id:"", road_name:"", in_candidate_list:null,
+          tentative_unit_id:"", tentative_road_name:"", tentative_in_candidate_list:null,
+          ambiguity:"", basis:[], difficulty:[], notes:""};
+}
+function curCaseId(){ return idx === -1 ? CASE_INDEX[0].case_id : CASE_INDEX[idx].case_id; }
+function curKey(){ return idx === -1 ? "__practice__" : curCaseId(); }
+function curAnswer(){
+  const k = curKey();
+  if(!answers[k]) answers[k] = blankAnswer();
+  return answers[k];
+}
+function isComplete(a){
+  if(a.outcome === "undetermined") return !!a.ambiguity;
+  if(a.outcome === "confirmed" || a.outcome === "tentative"){
+    return !!(a.unit_id && a.ambiguity);
+  }
+  return false;
+}
+
+async function fetchCase(cid){
+  if(caseCache[cid]) return caseCache[cid];
+  if(caseInflight[cid]) return caseInflight[cid];
+  const p = fetch(DATA_DIR + "/case_" + encodeURIComponent(cid) + ".json")
+    .then(r => { if(!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+    .then(data => { caseCache[cid] = data; delete caseInflight[cid]; return data; })
+    .catch(err => { delete caseInflight[cid]; throw err; });
+  caseInflight[cid] = p;
+  return p;
+}
+function prefetchNeighbors(){
+  const targets = [];
+  if(idx >= 0 && idx + 1 < CASE_INDEX.length) targets.push(CASE_INDEX[idx+1].case_id);
+  if(idx === -1) targets.push(CASE_INDEX[0].case_id);
+  targets.forEach(cid => { if(!caseCache[cid]) fetchCase(cid).catch(() => {}); });
+}
+
+function initMap(){
+  map = L.map('map', {
+    zoomControl:true,
+    dragging:false, scrollWheelZoom:false, touchZoom:false, doubleClickZoom:false, boxZoom:false
+  });
+  const tiles = L.tileLayer(TILE_URL, {maxZoom:21, attribution:TILE_ATTRIB}).addTo(map);
+  let tileErrorShown = false;
+  tiles.on('tileerror', () => {
+    if(tileErrorShown) return;
+    tileErrorShown = true;
+    const warn = document.createElement('div');
+    warn.className = 'help';
+    warn.style.cssText = 'background:var(--bad);color:#fff;margin-top:8px;';
+    warn.textContent = '地圖底圖圖磚載入失敗，可能是網路連線問題。候選單元清單仍可正常使用，不影響判讀。';
+    document.querySelector('.mapwrap2').insertAdjacentElement('afterend', warn);
+  });
+  layerGroup = L.layerGroup().addTo(map);
+  extraCluster = L.markerClusterGroup({
+    maxClusterRadius: 55, disableClusteringAtZoom: 19, spiderfyOnMaxZoom: true,
+    iconCreateFunction: (cluster) => L.divIcon({
+      html: '<div style="background:' + getCss('--extra-fill') + ';border:2px solid ' + getCss('--extra') +
+            ';color:' + getCss('--ink-dim') + ';width:30px;height:30px;border-radius:50%;' +
+            'display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">' +
+            cluster.getChildCount() + '</div>',
+      className: '', iconSize:[30,30]
+    })
+  });
+
+  const lock = document.getElementById('mapLock');
+  lock.onclick = () => {
+    map.dragging.enable(); map.scrollWheelZoom.enable();
+    map.touchZoom.enable(); map.doubleClickZoom.enable(); map.boxZoom.enable();
+    mapActivated = true;
+    lock.classList.add('hidden');
+    map.invalidateSize();
+  };
+}
+
+function unitStyle(u, selected){
+  const inList = u.in_candidate_list;
+  return {
+    radius: selected ? 10 : 7,
+    fillColor: selected ? getCss('--accent') : (inList ? getCss('--candidate-fill') : getCss('--extra-fill')),
+    color: selected ? getCss('--accent') : (inList ? getCss('--candidate') : getCss('--extra')),
+    weight: selected ? 3 : 2,
+    fillOpacity: 0.9,
+  };
+}
+function getCss(varName){
+  return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+}
+
+function extraDivIcon(selected){
+  const bg = selected ? getCss('--accent') : getCss('--extra-fill');
+  const bd = selected ? getCss('--accent') : getCss('--extra');
+  const sz = selected ? 18 : 14;
+  return L.divIcon({
+    html: '<div style="width:'+sz+'px;height:'+sz+'px;border-radius:50%;background:'+bg+
+          ';border:2px solid '+bd+';"></div>',
+    className: '', iconSize:[sz,sz]
+  });
+}
+
+function renderMap(fit){
+  if(fit === undefined) fit = true;
+  const c = caseCache[curCaseId()];
+  const a = curAnswer();
+  layerGroup.clearLayers();
+  extraCluster.clearLayers();
+  markerById = {};
+
+  c.polygons.forEach(p => {
+    const layer = L.geoJSON(p.geojson, {
+      style: {color:getCss('--pave'), weight:2, fillColor:getCss('--pave'), fillOpacity:0.4}
+    });
+    layer.bindPopup('<b>' + (p.road_name||'(未命名路段)') + '</b><br>' +
+      (p.sta_road||'') + ' ～ ' + (p.end_road||''));
+    layer.addTo(layerGroup);
+  });
+
+  const bounds = [];
+  c.units.filter(u => u.in_candidate_list).forEach(u => {
+    const sel = (a.tentative_unit_id === u.unit_id);
+    const mk = L.circleMarker([u.lat, u.lon], unitStyle(u, sel));
+    mk.bindTooltip(u.road_name, {permanent:false, direction:'top'});
+    mk.on('click', () => selectUnit(u));
+    mk.addTo(layerGroup);
+    markerById[u.unit_id] = mk;
+    bounds.push([u.lat, u.lon]);
+  });
+
+  c.units.filter(u => !u.in_candidate_list).forEach(u => {
+    const sel = (a.tentative_unit_id === u.unit_id);
+    const mk = L.marker([u.lat, u.lon], {icon: extraDivIcon(sel)});
+    mk.bindTooltip(u.road_name, {permanent:false, direction:'top'});
+    mk.on('click', () => selectUnit(u));
+    mk.addTo(extraCluster);
+    markerById[u.unit_id] = mk;
+  });
+  if(showExtra && !map.hasLayer(extraCluster)) extraCluster.addTo(map);
+  if(!showExtra && map.hasLayer(extraCluster)) map.removeLayer(extraCluster);
+
+  const rmk = L.circleMarker([c.report_lat, c.report_lon], {
+    radius:9, fillColor:getCss('--report'), color:'#fff', weight:2, fillOpacity:1
+  });
+  rmk.bindTooltip('查報地點', {permanent:false});
+  rmk.addTo(layerGroup);
+  bounds.push([c.report_lat, c.report_lon]);
+
+  if(fit){
+    if(bounds.length){
+      map.fitBounds(bounds, {padding:[30,30], maxZoom:19});
+    } else {
+      map.setView([c.report_lat, c.report_lon], 18);
+    }
+  }
+  setTimeout(() => map.invalidateSize(), 50);
+}
+
+function renderCandList(){
+  const c = caseCache[curCaseId()];
+  const a = curAnswer();
+  const list = document.getElementById('candList');
+  list.innerHTML = '';
+  const shown = c.units.filter(u => u.in_candidate_list || showExtra);
+  shown.sort((x,y) => (y.in_candidate_list - x.in_candidate_list));
+  shown.forEach((u) => {
+    const row = document.createElement('div');
+    row.className = 'crow' + (a.tentative_unit_id === u.unit_id ? ' sel' : '') + (u.in_candidate_list ? '' : ' extra');
+    row.innerHTML = '<div class="badge">' + (u.in_candidate_list ? '候' : '外') + '</div>' +
+      '<div><div class="rname">' + u.road_name + '</div>' +
+      '<div class="rid mono">ID: ' + u.unit_id + '</div></div>' +
+      (u.in_candidate_list ? '' : '<div class="tag">清單外</div>');
+    row.onclick = () => { selectUnit(u); map.panTo([u.lat, u.lon]); };
+    list.appendChild(row);
+  });
+  updateSelBox();
+}
+
+// Clicking a candidate always records the TENTATIVE pick (the process record, kept even if the
+// annotator later marks the case "undetermined"). The FINAL judged_unit_id/road_name used for
+// export/completeness mirrors the tentative pick ONLY when outcome isn't "undetermined" -- when
+// it is, the final fields are kept empty so no leftover selection masquerades as a confirmed or
+// tentative judgment.
+function selectUnit(u){
+  const a = curAnswer();
+  a.tentative_unit_id = u.unit_id;
+  a.tentative_road_name = u.road_name;
+  a.tentative_in_candidate_list = u.in_candidate_list;
+  if(!a.outcome) a.outcome = 'confirmed';
+  syncFinalFromTentative(a);
+  saveAnswers();
+  renderMap(false); renderCandList(); updateSelBox(); renderOutcomeState();
+}
+function syncFinalFromTentative(a){
+  if(a.outcome === 'undetermined'){
+    a.unit_id = ''; a.road_name = ''; a.in_candidate_list = null;
+  } else {
+    a.unit_id = a.tentative_unit_id; a.road_name = a.tentative_road_name;
+    a.in_candidate_list = a.tentative_in_candidate_list;
+  }
+}
+
+function updateSelBox(){
+  const a = curAnswer();
+  const box = document.getElementById('selBox');
+  const val = document.getElementById('selVal');
+  if(a.tentative_unit_id){
+    box.classList.remove('empty');
+    val.textContent = a.tentative_road_name + '　ID: ' + a.tentative_unit_id +
+      (a.tentative_in_candidate_list ? '' : '（清單外）') +
+      (a.outcome === 'undetermined' ? '　－尚未納入最終判定（目前為無法判定）' : '');
+  } else {
+    box.classList.add('empty');
+    val.textContent = '尚未選擇';
+  }
+}
+
+function renderCheckGroup(containerId, options, field, idPrefix){
+  const box = document.getElementById(containerId);
+  box.innerHTML = '';
+  const a = curAnswer();
+  options.forEach((opt, oi) => {
+    const row = document.createElement('div');
+    row.className = 'check';
+    const id = idPrefix + '_' + oi;
+    row.innerHTML = '<input type="checkbox" id="'+id+'"><label for="'+id+'">'+opt+'</label>';
+    const chk = row.querySelector('input');
+    chk.checked = a[field].includes(opt);
+    chk.onchange = () => {
+      if(chk.checked){ if(!a[field].includes(opt)) a[field].push(opt); }
+      else { a[field] = a[field].filter(x => x !== opt); }
+      saveAnswers();
+    };
+    box.appendChild(row);
+  });
+}
+function renderBasisList(){
+  renderCheckGroup('basisList', BASIS_OPTIONS, 'basis', 'basis');
+  renderCheckGroup('difficultyList', DIFFICULTY_OPTIONS, 'difficulty', 'diff');
+}
+
+function renderOutcomeState(){
+  const a = curAnswer();
+  document.querySelectorAll('input[name=outcome]').forEach(r => r.checked = (r.value === a.outcome));
+  const step4 = document.getElementById('step4Card');
+  step4.style.display = a.outcome ? '' : 'none';
+}
+
+function renderFormState(){
+  const a = curAnswer();
+  document.querySelectorAll('input[name=ambig]').forEach(r => r.checked = (r.value === a.ambiguity));
+  document.getElementById('notesInput').value = a.notes || '';
+  renderOutcomeState();
+  updateSelBox();
+}
+
+function renderJumpRow(){
+  const row = document.getElementById('jumpRow');
+  row.innerHTML = '';
+  CASE_INDEX.forEach((c, i) => {
+    const a = answers[c.case_id] || blankAnswer();
+    const b = document.createElement('button');
+    b.textContent = (i+1);
+    b.className = (i === idx ? 'cur' : '');
+    const complete = isComplete(a);
+    const started = a.outcome || a.tentative_unit_id;
+    b.style.borderBottomColor = complete ? 'var(--ok)' : (started ? 'var(--warn)' : 'var(--line)');
+    b.onclick = () => { idx = i; renderAll(); };
+    row.appendChild(b);
+  });
+  const cur = row.children[idx];
+  if(cur) cur.scrollIntoView({inline:'center', block:'nearest'});
+}
+
+function renderProgress(){
+  const done = CASE_INDEX.filter(c => isComplete(answers[c.case_id] || blankAnswer())).length;
+  document.getElementById('progFill').style.width = (done / CASE_INDEX.length * 100) + '%';
+  document.getElementById('progCount').textContent = done + ' / ' + CASE_INDEX.length + ' 完成';
+}
+
+async function renderAll(){
+  const practice = (idx === -1);
+  const cid = curCaseId();
+
+  document.getElementById('loadingWrap').classList.remove('hidden');
+  document.getElementById('mapLock').classList.add('hidden');
+  let c;
+  try{
+    c = await fetchCase(cid);
+  }catch(err){
+    document.getElementById('loadingWrap').textContent = '案例資料載入失敗，請檢查網路連線後按「上一筆／下一筆」重試。';
+    return;
+  }
+  document.getElementById('loadingWrap').classList.add('hidden');
+  if(!mapActivated) document.getElementById('mapLock').classList.remove('hidden');
+
+  document.getElementById('addrText').textContent = c.address;
+  document.getElementById('addrRecap').textContent = c.address;
+  document.getElementById('caseIdText').textContent = practice ? '示範案例（不計入正式結果）' : ('案例 ' + (idx+1) + ' / ' + CASE_INDEX.length);
+  document.getElementById('headerTitle').textContent = practice ? '示範案例' : '道路查報案件人工空間配對驗證（200筆）';
+  document.getElementById('progressRow').style.display = practice ? 'none' : 'flex';
+  document.getElementById('jumpBar').style.display = practice ? 'none' : 'flex';
+  document.getElementById('jumpRow').style.display = practice ? 'none' : 'flex';
+  document.getElementById('exportCard').classList.toggle('hidden', practice || idx !== CASE_INDEX.length - 1);
+  showExtra = false;
+  document.getElementById('toggleExtraBtn').textContent = '顯示候選清單外單元';
+  renderMap();
+  renderCandList();
+  renderBasisList();
+  renderFormState();
+  if(!practice) renderJumpRow();
+  if(!practice) renderProgress();
+  document.getElementById('prevBtn').disabled = practice;
+  document.getElementById('nextBtn').textContent = practice ? '開始正式 200 筆 →' : ((idx === CASE_INDEX.length - 1) ? '完成' : '下一筆 →');
+  document.getElementById('exportArea').classList.add('hidden');
+  document.getElementById('copyBtn').classList.add('hidden');
+  document.getElementById('copyStatus').textContent = '';
+  window.scrollTo(0,0);
+  prefetchNeighbors();
+}
+
+document.getElementById('toggleExtraBtn').onclick = () => {
+  showExtra = !showExtra;
+  document.getElementById('toggleExtraBtn').textContent = showExtra ? '隱藏候選清單外單元' : '顯示候選清單外單元';
+  renderMap(false); renderCandList();
+};
+document.getElementById('clearSelBtn').onclick = () => {
+  const a = curAnswer();
+  a.unit_id=''; a.road_name=''; a.in_candidate_list=null;
+  a.tentative_unit_id=''; a.tentative_road_name=''; a.tentative_in_candidate_list=null;
+  a.outcome='';
+  saveAnswers(); renderMap(); renderCandList(); renderFormState();
+};
+document.querySelectorAll('input[name=outcome]').forEach(r => r.onchange = () => {
+  const a = curAnswer();
+  a.outcome = r.value;
+  syncFinalFromTentative(a);
+  saveAnswers(); renderOutcomeState(); updateSelBox(); renderJumpRow(); renderProgress();
+});
+document.querySelectorAll('input[name=ambig]').forEach(r => r.onchange = () => {
+  curAnswer().ambiguity = r.value; saveAnswers(); renderJumpRow(); renderProgress();
+});
+document.getElementById('notesInput').oninput = (e) => {
+  curAnswer().notes = e.target.value; saveAnswers();
+};
+document.getElementById('prevBtn').onclick = () => { if(idx>0){ idx--; renderAll(); } };
+document.getElementById('nextBtn').onclick = () => {
+  if(idx === -1){ idx = 0; renderAll(); return; }
+  if(idx < CASE_INDEX.length - 1){ idx++; renderAll(); }
+  else { document.getElementById('exportCard').scrollIntoView({behavior:'smooth'}); }
+};
+document.getElementById('jumpGoBtn').onclick = () => {
+  const v = parseInt(document.getElementById('jumpInput').value, 10);
+  if(!v || v < 1 || v > CASE_INDEX.length) return;
+  idx = v - 1; renderAll();
+};
+
+function buildExportText(){
+  const rows = [["case_id","annotator","tool_version","outcome","judged_road_name","judged_unit_id",
+    "in_candidate_list","tentative_road_name","tentative_unit_id","tentative_in_candidate_list",
+    "has_ambiguity","basis","difficulty","notes","exported_at"]];
+  CASE_INDEX.forEach(c => {
+    const a = answers[c.case_id] || blankAnswer();
+    rows.push([
+      c.case_id, ANNOTATOR, TOOL_VERSION, a.outcome||'', a.road_name||'', a.unit_id||'',
+      a.in_candidate_list===null?'':(a.in_candidate_list?'TRUE':'FALSE'),
+      a.tentative_road_name||'', a.tentative_unit_id||'',
+      a.tentative_in_candidate_list===null?'':(a.tentative_in_candidate_list?'TRUE':'FALSE'),
+      a.ambiguity||'', (a.basis||[]).join(';'), (a.difficulty||[]).join(';'),
+      (a.notes||'').replace(/\n/g,' '), new Date().toISOString()
+    ]);
+  });
+  return rows.map(r => r.map(v => {
+    v = String(v);
+    return /[",\n]/.test(v) ? '"' + v.replace(/"/g,'""') + '"' : v;
+  }).join(',')).join('\n');
+}
+document.getElementById('exportBtn').onclick = () => {
+  const txt = buildExportText();
+  const area = document.getElementById('exportArea');
+  area.value = txt;
+  area.classList.remove('hidden');
+  document.getElementById('copyBtn').classList.remove('hidden');
+  const doneCount = CASE_INDEX.filter(c => isComplete(answers[c.case_id] || blankAnswer())).length;
+  document.getElementById('copyStatus').textContent =
+    doneCount < CASE_INDEX.length ? ('提醒：目前僅完成 ' + doneCount + ' / ' + CASE_INDEX.length + ' 筆，仍可先行匯出。') : '全部 200 筆已完成。';
+};
+document.getElementById('copyBtn').onclick = async () => {
+  const area = document.getElementById('exportArea');
+  let ok = false;
+  try{ await navigator.clipboard.writeText(area.value); ok = true; }
+  catch(e){ try{ area.focus(); area.select(); ok = document.execCommand('copy'); }catch(e2){ ok = false; } }
+  document.getElementById('copyStatus').textContent = ok ? '已複製，請貼到 LINE／Email 傳給研究者。' : '複製失敗，請手動全選文字後複製。';
+};
+
+document.getElementById('startBtn').onclick = async () => {
+  const v = document.getElementById('nameInput').value.trim();
+  if(!v){ alert('請輸入標註代號'); return; }
+  ANNOTATOR = v;
+  try{ localStorage.setItem('phase2a_v2_200_last_name', v); }catch(e){}
+  loadAnswers();
+  document.getElementById('setupView').classList.add('hidden');
+  document.getElementById('practiceIntro').classList.remove('hidden');
+};
+document.getElementById('toPracticeBtn').onclick = async () => {
+  document.getElementById('practiceIntro').classList.add('hidden');
+  document.getElementById('mainView').classList.remove('hidden');
+  document.getElementById('whoLine').textContent = '標註代號：' + ANNOTATOR + '　｜　工具版本：' + TOOL_VERSION;
+  initMap();
+  idx = -1;
+  await renderAll();
+};
+(function(){
+  try{
+    const last = localStorage.getItem('phase2a_v2_200_last_name');
+    if(last) document.getElementById('nameInput').value = last;
+  }catch(e){}
+})();
+</script>
+</body>
+</html>
