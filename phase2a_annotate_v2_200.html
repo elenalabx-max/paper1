@@ -245,12 +245,11 @@ footer.nav .btn{flex:1;}
     <h2><span class="stepnum">3</span>記錄歧義與判定依據</h2>
 
     <div class="field">
-      <span class="flabel">是否存在道路單元判定歧義？（單選）</span>
-      <p class="smallnote" style="margin-top:0;">請依查報資訊及地圖上可辨識的道路單元進行判斷。本題與前述「判定結果」分別評估——即使已選定最可能的道路單元，若仍有其他合理候選，也應勾選「有歧義」。</p>
+      <span class="flabel">是否有其他可能符合的道路單元？</span>
       <div class="radiorow outcome">
-        <label><input type="radio" name="ambig" value="是"><span><b>有歧義</b><br>存在兩個以上合理候選道路單元，無法明確排除其他候選。</span></label>
-        <label><input type="radio" name="ambig" value="否"><span><b>無歧義</b><br>現有資訊足以確認只有一個合理候選道路單元。</span></label>
-        <label><input type="radio" name="ambig" value="無法判斷"><span><b>資訊不足，無法判斷</b><br>現有資訊不足以判斷是否存在其他合理候選道路單元。</span></label>
+        <label><input type="radio" name="ambig" value="是"><span><b>有其他可能位置</b><br>有兩個以上可能符合的道路單元，無法排除其他選項。</span></label>
+        <label><input type="radio" name="ambig" value="否"><span><b>只有一個可能位置</b><br>現有資訊足以確認只有一個道路單元符合。</span></label>
+        <label><input type="radio" name="ambig" value="無法判斷"><span><b>無法判斷</b><br>資訊不足，無法確認是否還有其他可能的道路單元。</span></label>
       </div>
     </div>
 
