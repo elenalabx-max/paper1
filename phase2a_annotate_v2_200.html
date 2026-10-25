@@ -146,38 +146,44 @@ footer.nav .btn{flex:1;}
     </p>
     <p style="font-size:14px;line-height:1.7;">
       若現有資訊不足以確認特定道路單元，請依實際情況選擇「暫定候選道路單元」或「無法判定道路單元」，
-      <b>不需要勉強選出答案</b>。系統提供的候選清單僅供參考，請同時檢視地圖上的其他道路單元。
+      <b>不需要勉強選出答案</b>。系統提供的候選清單僅供參考，也可以點擊顯示候選清單外單元，檢視地圖上的其他道路單元。
     </p>
     <p style="font-size:13px;line-height:1.6;color:var(--ink-dim);">
       開始前會先有一筆<b>示範案例</b>（不計入正式結果），帶您熟悉地圖操作與各欄位意義，之後才進入正式 200 筆。
-      這批 200 筆裡包含您先前已填過的 20 筆試標案例，請一樣依現有資訊獨立判斷，不需要刻意回想先前的答案。
     </p>
     <div class="field">
-      <label class="flabel" for="nameInput">標註代號</label>
+      <label class="flabel" for="nameInput">標註者暱稱</label>
       <input type="text" id="nameInput" placeholder="例如：annotatorA">
     </div>
     <button class="btn primary" id="startBtn" style="width:100%;">開始示範案例</button>
-    <p class="smallnote">本頁為 200 筆正式版（與 20 筆試標版是不同工具／不同資料，兩者分開儲存）。每筆案例的地圖資料是連線即時下載，需要網路連線；作答本身儲存在您這支裝置的瀏覽器中。</p>
   </div>
 </div>
 
 <div id="practiceIntro" class="hidden setup">
   <div class="card">
     <span class="practicebadge">示範案例・不計入正式結果</span>
-    <h2 style="font-size:13px;">地圖操作與名詞說明</h2>
+    <h2 style="font-size:13px;">地圖操作說明</h2>
+
     <div class="help tip">
-      <b>道路名稱</b> vs <b>道路單元</b>：同一條路（例如「中山北路二段」）會被切成很多小段「道路單元」，
-      每個單元有自己的編號（單元ID）。您有時能確定是哪一條路，但不一定能確定是哪一個單元——這兩者請分開判斷。
+      <b>1. 道路名稱與道路單元</b><br>
+      同一條路會分成多個「道路單元」，每個單元都有自己的編號。<b>知道是哪條路，不代表能確定是哪個單元。</b>
     </div>
+
     <div class="help tip">
-      地圖上的<b>藍色色塊</b>是道路鋪面範圍圖資（政府道路鋪面測量範圍，供參考，不代表單一道路單元的精確邊界），
-      <b>綠色圓點</b>是系統原本提供的候選道路單元，<b>灰色圓點</b>是候選清單以外、但在附近範圍內的其他道路單元
-      （需要按「顯示候選清單外單元」才會出現），<b>紅點</b>是查報地點。
+      <b>2. 地圖顏色代表什麼？</b>
+      <ul style="margin:8px 0 0;padding-left:4px;list-style:none;line-height:2;">
+        <li><span class="dot r" style="display:inline-block;vertical-align:middle;"></span> <b>紅點：</b>查報地點</li>
+        <li><span class="dot c" style="display:inline-block;vertical-align:middle;"></span> <b>綠點：</b>系統提供的候選道路單元</li>
+        <li><span class="dot e" style="display:inline-block;vertical-align:middle;"></span> <b>灰點：</b>候選清單外的其他道路單元（按鈕開啟）</li>
+        <li><span class="sw" style="display:inline-block;vertical-align:middle;"></span> <b>藍色色塊：</b>道路鋪面範圍，僅供位置參考，並非單元邊界</li>
+      </ul>
     </div>
+
     <div class="help tip">
-      候選清單（綠點）只是系統篩選的結果，<b>不代表正確答案</b>。如果您判斷正確答案不在候選清單中，可以直接點選
-      灰色的清單外單元；如果連灰色清單中也找不到、或範圍內完全沒有合理答案，可以在地圖上自由平移到更遠處尋找，
-      找不到的話就記錄「無法判定道路單元」，不需要勉強選一個答案。
+      <b>3. 如何選擇？</b><br>
+      請依地址與地圖判斷，<b>綠點不一定是正確答案</b>，開啟候選清單外單元後也可以選灰點。
+      <br><br>
+      地圖可自由移動、放大。若資訊不足、無法確定是哪個單元，請選「無法判定道路單元」，<b>不用勉強選答案</b>。
     </div>
     <button class="btn primary" id="toPracticeBtn" style="width:100%;">進入示範案例</button>
   </div>
@@ -186,6 +192,7 @@ footer.nav .btn{flex:1;}
 <div id="mainView" class="hidden">
 <header>
   <h1 id="headerTitle">道路查報案件人工空間配對驗證</h1>
+  <span class="practicebadge hidden" id="practiceFlag" style="margin-top:6px;">示範案例・不計入正式結果</span>
   <div class="sub mono" id="whoLine"></div>
   <div class="progress" id="progressRow">
     <div class="bar"><div class="fill" id="progFill"></div></div>
@@ -200,14 +207,7 @@ footer.nav .btn{flex:1;}
 
 <main>
   <div class="card">
-    <h2><span class="stepnum">1</span>確認查報位置</h2>
-    <div class="addr" id="addrText"></div>
-    <div class="caseid mono" id="caseIdText"></div>
-    <p class="smallnote">請確認下方地圖上的紅點是否與這個地址描述的位置相符，再進行下一步判讀。</p>
-  </div>
-
-  <div class="card">
-    <h2><span class="stepnum">2</span>在地圖上辨識道路單元</h2>
+    <h2><span class="stepnum">1</span>在地圖上辨識道路單元</h2>
     <div class="mapwrap2">
       <div id="map"></div>
       <div class="maplock hidden" id="mapLock"><span>點一下以操作地圖（平移／縮放）</span></div>
@@ -232,7 +232,7 @@ footer.nav .btn{flex:1;}
   </div>
 
   <div class="card">
-    <h2><span class="stepnum">3</span>選擇判定結果</h2>
+    <h2><span class="stepnum">2</span>選擇判定結果</h2>
     <p class="smallnote" style="margin-top:0;">請依據查報地址、位置資訊及道路圖資，選擇最符合本案的判定結果。</p>
     <div class="radiorow outcome" id="outcomeRow">
       <label><input type="radio" name="outcome" value="confirmed"><span><b>已確認道路單元</b><br>現有資訊足以確認案件對應的特定道路單元。</span></label>
@@ -242,7 +242,7 @@ footer.nav .btn{flex:1;}
   </div>
 
   <div class="card" id="step4Card">
-    <h2><span class="stepnum">4</span>記錄歧義與判定依據</h2>
+    <h2><span class="stepnum">3</span>記錄歧義與判定依據</h2>
 
     <div class="field">
       <span class="flabel">是否存在道路單元判定歧義？（單選）</span>
@@ -630,9 +630,8 @@ async function renderAll(){
   document.getElementById('loadingWrap').classList.add('hidden');
   if(!mapActivated) document.getElementById('mapLock').classList.remove('hidden');
 
-  document.getElementById('addrText').textContent = c.address;
   document.getElementById('addrRecap').textContent = c.address;
-  document.getElementById('caseIdText').textContent = practice ? '示範案例（不計入正式結果）' : ('案例 ' + (idx+1) + ' / ' + CASE_INDEX.length);
+  document.getElementById('practiceFlag').classList.toggle('hidden', !practice);
   document.getElementById('headerTitle').textContent = practice ? '示範案例' : '道路查報案件人工空間配對驗證（200筆）';
   document.getElementById('progressRow').style.display = practice ? 'none' : 'flex';
   document.getElementById('jumpBar').style.display = practice ? 'none' : 'flex';
@@ -731,7 +730,7 @@ document.getElementById('copyBtn').onclick = async () => {
 
 document.getElementById('startBtn').onclick = async () => {
   const v = document.getElementById('nameInput').value.trim();
-  if(!v){ alert('請輸入標註代號'); return; }
+  if(!v){ alert('請輸入標註者暱稱'); return; }
   ANNOTATOR = v;
   try{ localStorage.setItem('phase2a_v2_200_last_name', v); }catch(e){}
   loadAnswers();
@@ -741,7 +740,7 @@ document.getElementById('startBtn').onclick = async () => {
 document.getElementById('toPracticeBtn').onclick = async () => {
   document.getElementById('practiceIntro').classList.add('hidden');
   document.getElementById('mainView').classList.remove('hidden');
-  document.getElementById('whoLine').textContent = '標註代號：' + ANNOTATOR + '　｜　工具版本：' + TOOL_VERSION;
+  document.getElementById('whoLine').textContent = '標註者暱稱：' + ANNOTATOR + '　｜　工具版本：' + TOOL_VERSION;
   initMap();
   idx = -1;
   await renderAll();
