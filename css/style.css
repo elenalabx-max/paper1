@@ -1,0 +1,175 @@
+:root {
+  --bg: #f4f3ef; --panel: #ffffff; --ink: #1f2328; --ink2: #545b64; --line: #d9d6cf; --soft: #ecebe6;
+  --accent: #1f5f8b; --accent-soft: #e3eef6;
+  --contract: #8a5a00; --contract-bg: #fbf3e0; --contract-line: #e0c27a;
+  --have: #2f7d4a; --have-bg: #e4f3e8; --pend: #9a6500; --pend-bg: #fdf0d5;
+  --plan: #1f5f8b; --plan-bg: #e3eef6; --none: #6b6f76; --none-bg: #f1f1f1;
+  --warn: #b4281e; --warn-bg: #fbe9e7;
+  --map-bg: #f7f6f2; --map-road: #b3aea2;
+  font-family: "Noto Sans TC", "Microsoft JhengHei", "PingFang TC", system-ui, sans-serif;
+  font-size: 15px; color: var(--ink);
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); line-height: 1.6; }
+a { color: var(--accent); }
+h1, h2, h3, h4 { line-height: 1.35; margin: 0 0 .5em; }
+h2 { font-size: 1.35rem; }
+h3 { font-size: 1.08rem; margin-top: 1.2em; }
+p { margin: .4em 0 .8em; }
+small, .muted { color: var(--ink2); }
+code { background: var(--soft); padding: 0 .3em; border-radius: 3px; font-size: .9em; }
+
+/* ---------- 版面 ---------- */
+header.top { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 12px; padding: 8px 16px; background: var(--panel); border-bottom: 1px solid var(--line); }
+header.top h1 { font-size: 1.02rem; margin: 0; flex: 1; font-weight: 600; }
+header.top h1 span { color: var(--ink2); font-weight: 400; }
+.prov { font-size: .82rem; font-weight: 600; padding: 3px 10px; border-radius: 999px; border: 1px solid; white-space: nowrap; }
+.prov.sim { color: var(--warn); background: var(--warn-bg); border-color: #e9b4ad; }
+.prov.import { color: var(--pend); background: var(--pend-bg); border-color: #e7c983; }
+.layout { display: grid; grid-template-columns: 196px 1fr; min-height: calc(100vh - 47px); }
+nav.side { border-right: 1px solid var(--line); background: var(--panel); padding: 10px 0; position: sticky; top: 47px; height: calc(100vh - 47px); overflow: auto; }
+nav.side a { display: flex; gap: 8px; padding: 6px 14px; color: var(--ink); text-decoration: none; font-size: .92rem; border-left: 3px solid transparent; }
+nav.side a b { color: var(--ink2); font-weight: 500; width: 1.4em; text-align: right; }
+nav.side a:hover { background: var(--soft); }
+nav.side a.on { background: var(--accent-soft); border-left-color: var(--accent); font-weight: 600; }
+nav.side a.contract-link { color: var(--contract); }
+nav.side .navfoot { padding: 12px 14px; font-size: .78rem; color: var(--ink2); border-top: 1px solid var(--line); margin-top: 10px; }
+main { padding: 20px 24px 60px; min-width: 0; }
+.page { max-width: 1240px; }
+.page.wide { max-width: none; }
+.lead { font-size: 1.02rem; color: var(--ink2); max-width: 900px; }
+
+/* ---------- 標記 ---------- */
+.tag { display: inline-block; font-size: .74rem; line-height: 1.5; padding: 0 7px; border-radius: 4px; border: 1px solid; white-space: nowrap; vertical-align: 1px; font-weight: 500; }
+.t-have { color: var(--have); background: var(--have-bg); border-color: #a9d3b5; }
+.t-pend { color: var(--pend); background: var(--pend-bg); border-color: #e7c983; }
+.t-plan { color: var(--plan); background: var(--plan-bg); border-color: #a9c8de; }
+.t-none { color: var(--none); background: var(--none-bg); border-color: #c9c9c9; border-style: dashed; }
+.t-fixed { color: var(--contract); background: var(--contract-bg); border-color: var(--contract-line); }
+.legendbar { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; font-size: .85rem; color: var(--ink2); margin: 6px 0 16px; }
+
+/* ---------- 卡片、表格 ---------- */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; }
+.card h4 { margin: 0 0 6px; font-size: 1rem; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.card ul { margin: 4px 0; padding-left: 1.2em; }
+.card.note { background: var(--soft); }
+table.t { border-collapse: collapse; width: 100%; background: var(--panel); font-size: .9rem; }
+table.t th, table.t td { border: 1px solid var(--line); padding: 6px 9px; text-align: left; vertical-align: top; }
+table.t th { background: var(--soft); font-weight: 600; }
+table.t td.num, table.t th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.tablewrap { overflow-x: auto; }
+.callout { border-left: 4px solid var(--warn); background: var(--warn-bg); padding: 8px 12px; border-radius: 0 6px 6px 0; font-size: .9rem; margin: 10px 0; }
+.callout.info { border-color: var(--accent); background: var(--accent-soft); }
+
+/* ---------- 契約 ---------- */
+.contract { border: 2px solid var(--contract-line); background: var(--contract-bg); border-radius: 8px; padding: 16px 20px; }
+.contract .lock { color: var(--contract); font-weight: 700; font-size: .85rem; letter-spacing: .05em; }
+.contract blockquote { margin: 10px 0 0; padding: 12px 16px; background: #fffdf7; border: 1px solid var(--contract-line); border-radius: 6px; font-family: "Noto Serif TC", "PMingLiU", serif; font-size: 1rem; line-height: 1.9; user-select: text; }
+table.t tr.fixed td:first-child { background: var(--contract-bg); color: var(--contract); font-weight: 600; }
+
+/* ---------- 控制項 ---------- */
+button, .btn { font: inherit; font-size: .88rem; padding: 4px 11px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 5px; cursor: pointer; }
+button:hover { border-color: var(--accent); }
+button.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+select, input[type=number] { font: inherit; font-size: .88rem; padding: 2px 5px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); color: var(--ink); }
+.seg { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.ctrl { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: .88rem; overflow-y: auto; overflow-x: hidden; }
+.ctrl fieldset { border: 0; border-top: 1px solid var(--soft); margin: 0; padding: 8px 0 6px; }
+.ctrl fieldset:first-child { border-top: 0; padding-top: 0; }
+.ctrl legend { font-weight: 600; font-size: .85rem; padding: 0; margin-bottom: 4px; }
+.ctrl label { display: inline-flex; align-items: center; gap: 3px; margin: 1px 8px 1px 0; }
+.ctrl label.block { display: flex; }
+.ctrl .row { display: flex; align-items: center; gap: 6px; margin: 3px 0; }
+.ctrl .row { flex-wrap: wrap; }
+.ctrl .row > span:first-child { width: 6.2em; color: var(--ink2); flex: none; }
+.ctrl input[type=range] { flex: 1; min-width: 60px; }
+.ctrl .val { width: 3.2em; text-align: right; font-variant-numeric: tabular-nums; }
+.swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
+.hint { font-size: .78rem; color: var(--ink2); margin: 2px 0 0; line-height: 1.45; }
+details.wts summary { cursor: pointer; font-weight: 600; font-size: .85rem; }
+
+/* ---------- 地圖頁 ---------- */
+.mappage { display: grid; grid-template-columns: 290px 1fr 290px; gap: 12px; height: calc(100vh - 120px); min-height: 560px; }
+.mapwrap { display: flex; flex-direction: column; min-width: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.counters { display: flex; flex-wrap: wrap; gap: 0; border-bottom: 1px solid var(--line); }
+.counters div { flex: 1; min-width: 110px; padding: 6px 12px; border-right: 1px solid var(--line); }
+.counters div:last-child { border-right: 0; }
+.counters b { display: block; font-size: 1.3rem; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.counters small { font-size: .76rem; }
+.mapview { position: relative; flex: 1; min-height: 300px; cursor: grab; }
+.mapview canvas { position: absolute; inset: 0; display: block; }
+.maplegend { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; padding: 6px 12px; border-top: 1px solid var(--line); font-size: .8rem; color: var(--ink2); }
+.ramp { display: inline-flex; height: 10px; width: 140px; border-radius: 2px; overflow: hidden; vertical-align: middle; }
+.ramp i { flex: 1; }
+.detail { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; overflow: auto; font-size: .86rem; }
+.detail .ev { border-top: 1px solid var(--soft); padding: 6px 0; }
+.detail .ev:first-of-type { border-top: 0; }
+.detail .ev.dim { opacity: .45; }
+.statuspill { display: inline-block; font-size: .74rem; padding: 0 6px; border-radius: 3px; background: var(--soft); }
+.statuspill.open { background: var(--warn-bg); color: var(--warn); }
+.statuspill.fixed { background: var(--have-bg); color: var(--have); }
+
+.twomaps { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.twomaps .mapwrap { height: 470px; }
+.mapbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 10px; border-bottom: 1px solid var(--line); font-size: .85rem; }
+
+/* ---------- 架構圖、決策樹 ---------- */
+.diagram { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px; overflow-x: auto; }
+.diagram svg { display: block; min-width: 1000px; width: 100%; height: auto; }
+.tree ul { list-style: none; margin: 0; padding-left: 20px; border-left: 1px dashed var(--line); }
+.tree > ul { border-left: 0; padding-left: 0; }
+.tree li { margin: 3px 0; }
+.tree .q { font-weight: 600; }
+.tree .leaf { display: inline-block; background: var(--plan-bg); color: var(--plan); border-radius: 4px; padding: 0 6px; font-size: .85rem; }
+.tree li.hit > .q, .tree li.hit > .ans { background: #fff2b3; }
+.stepper { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; }
+.stepper .path { font-size: .82rem; color: var(--ink2); margin-bottom: 8px; }
+.stepper .opts { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.stepper .opts button { text-align: left; padding: 7px 12px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+
+/* ---------- 問卷 ---------- */
+.photo-ph { aspect-ratio: 4/3; max-height: 360px; margin: 0 auto; border: 2px dashed var(--line); border-radius: 6px; display: grid; place-items: center; color: var(--ink2); background: repeating-linear-gradient(45deg, var(--soft), var(--soft) 10px, var(--panel) 10px, var(--panel) 20px); text-align: center; padding: 10px; font-size: .9rem; }
+.dce { display: grid; grid-template-columns: 9em 1fr 1fr; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--panel); font-size: .9rem; }
+.dce > div { padding: 6px 10px; border-bottom: 1px solid var(--soft); }
+.dce .h { background: var(--soft); font-weight: 600; }
+.dce .lab { color: var(--ink2); }
+.qtabs { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0; }
+
+/* ---------- 時間軸、步驟 ---------- */
+.chart { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px; }
+.chart svg { width: 100%; height: auto; display: block; }
+.phases { counter-reset: ph; display: grid; gap: 8px; }
+.phase { display: grid; grid-template-columns: 7.5em 1fr 13em; gap: 12px; align-items: start; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; }
+.phase .n { font-weight: 700; color: var(--accent); }
+.bars { position: relative; height: 18px; background: var(--soft); border-radius: 3px; }
+.bars i { position: absolute; top: 3px; height: 12px; background: var(--accent); border-radius: 2px; opacity: .8; }
+
+/* ---------- 對話框 ---------- */
+dialog { border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; max-width: 760px; width: 92vw; background: var(--panel); color: var(--ink); }
+dialog::backdrop { background: rgba(0,0,0,.35); }
+.maprow { display: grid; grid-template-columns: 9em 1fr; gap: 6px 10px; align-items: center; margin: 10px 0; font-size: .9rem; }
+
+@media (max-width: 1200px) {
+  .mappage { grid-template-columns: 260px 1fr; height: auto; }
+  .mappage .mapwrap { height: 620px; }
+  .mappage .detail { grid-column: 1 / -1; max-height: 360px; }
+}
+@media (max-width: 860px) {
+  .layout { grid-template-columns: 1fr; }
+  nav.side { position: static; height: auto; display: flex; flex-wrap: wrap; padding: 4px; }
+  nav.side a { border-left: 0; padding: 4px 8px; }
+  nav.side .navfoot { display: none; }
+  main { padding: 14px 16px 40px; }
+  .mappage, .twomaps, .grid2, .grid3 { grid-template-columns: 1fr; }
+  .phase { grid-template-columns: 1fr; }
+}
+@media print {
+  header.top, nav.side, .noprint, button { display: none !important; }
+  .layout { display: block; }
+  main { padding: 0; }
+  .page { display: block !important; page-break-after: always; }
+}
