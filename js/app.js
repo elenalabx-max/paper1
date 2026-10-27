@@ -142,6 +142,8 @@ function show(id) {
   if (v && !v.inited && v.init) { v.init(); v.inited = true; }
   syncControls();
   renderActive();
+  const nav = $('nav.side'), on = $('nav.side a.on');
+  if (on && nav.scrollWidth > nav.clientWidth) nav.scrollLeft = on.offsetLeft - (nav.clientWidth - on.offsetWidth) / 2;
   window.scrollTo(0, 0);
 }
 

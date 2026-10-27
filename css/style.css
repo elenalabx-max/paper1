@@ -159,13 +159,28 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
   .mappage .detail { grid-column: 1 / -1; max-height: 360px; }
 }
 @media (max-width: 860px) {
-  .layout { grid-template-columns: 1fr; }
-  nav.side { position: static; height: auto; display: flex; flex-wrap: wrap; padding: 4px; }
-  nav.side a { border-left: 0; padding: 4px 8px; }
+  header.top { position: static; flex-wrap: wrap; gap: 4px 8px; padding: 10px 16px 8px; }
+  header.top h1 { flex: 1 1 auto; min-width: 0; font-size: 1rem; }
+  header.top h1 span { display: block; font-size: .8rem; }
+  header.top button { display: none; }
+  .layout { grid-template-columns: minmax(0, 1fr); min-height: 0; }
+  body { overflow-x: hidden; }
+  /* 分頁列改為單列橫向捲動，固定在畫面上方 */
+  nav.side { position: sticky; top: 0; z-index: 20; height: auto; display: flex; flex-wrap: nowrap; overflow-x: auto; padding: 0; border-right: 0; border-bottom: 1px solid var(--line); scrollbar-width: none; }
+  nav.side::-webkit-scrollbar { display: none; }
+  nav.side a { flex: none; white-space: nowrap; border-left: 0; border-bottom: 3px solid transparent; padding: 8px 10px; }
+  nav.side a.on { border-bottom-color: var(--accent); }
   nav.side .navfoot { display: none; }
   main { padding: 14px 16px 40px; }
-  .mappage, .twomaps, .grid2, .grid3 { grid-template-columns: 1fr; }
+  .mappage, .twomaps, .grid2, .grid3 { grid-template-columns: minmax(0, 1fr) !important; }
+  .mappage .mapwrap, .twomaps .mapwrap { height: 440px !important; }
+  .mappage .mapwrap { order: -1; }
+  .mappage .ctrl { max-height: none; }
+  .counters div { min-width: 0; flex: 1 1 45%; }
+  table.t { font-size: .84rem; }
   .phase { grid-template-columns: 1fr; }
+  .dce { grid-template-columns: 6.5em 1fr 1fr; }
+  .lead { font-size: .95rem; }
 }
 @media print {
   header.top, nav.side, .noprint, button { display: none !important; }

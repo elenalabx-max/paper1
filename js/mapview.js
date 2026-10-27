@@ -24,22 +24,48 @@ class MapView {
     this.layer = null; this.sel = null; this.highlightUnits = null; this.title = opts.title || '';
     this.dpr = window.devicePixelRatio || 1;
     this.fit();
-    let drag = null, moved = false;
-    this.cv.addEventListener('mousedown', e => { drag = [e.clientX, e.clientY, this.cx, this.cy]; moved = false; });
-    window.addEventListener('mousemove', e => {
-      if (!drag) return;
-      const dx = e.clientX - drag[0], dy = e.clientY - drag[1];
-      if (Math.abs(dx) + Math.abs(dy) > 3) moved = true;
-      this.cx = drag[2] - dx / this.k; this.cy = drag[3] + dy / this.k; this.draw();
-      if (this.opts.onView) this.opts.onView(this);
+    // 滑鼠與觸控共用 pointer 事件：單指／左鍵拖曳平移，雙指縮放，未移動即視為點選
+    const pts = new Map();
+    let drag = null, moved = false, pinch = null;
+    this.cv.style.touchAction = 'none';
+    this.cv.addEventListener('pointerdown', e => {
+      this.cv.setPointerCapture(e.pointerId);
+      pts.set(e.pointerId, [e.clientX, e.clientY]);
+      if (pts.size === 1) { drag = [e.clientX, e.clientY, this.cx, this.cy]; moved = false; }
+      else if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]) || 1, k: this.k }; moved = true; }
     });
-    window.addEventListener('mouseup', e => {
-      if (drag && !moved && e.target === this.cv && this.opts.onClick) {
-        const r = this.cv.getBoundingClientRect();
-        this.opts.onClick(this.toWorld(e.clientX - r.left, e.clientY - r.top), this);
+    this.cv.addEventListener('pointermove', e => {
+      if (!pts.has(e.pointerId)) return;
+      pts.set(e.pointerId, [e.clientX, e.clientY]);
+      if (pts.size >= 2 && pinch) {
+        const [a, b] = [...pts.values()], r = this.cv.getBoundingClientRect();
+        const mx = (a[0] + b[0]) / 2 - r.left, my = (a[1] + b[1]) / 2 - r.top;
+        const [wx, wy] = this.toWorld(mx, my);
+        this.k = Math.max(0.02, Math.min(3, pinch.k * Math.hypot(a[0] - b[0], a[1] - b[1]) / pinch.d));
+        const [nx, ny] = this.toWorld(mx, my); this.cx += wx - nx; this.cy += wy - ny;
+      } else if (drag) {
+        const dx = e.clientX - drag[0], dy = e.clientY - drag[1];
+        if (Math.abs(dx) + Math.abs(dy) > (e.pointerType === 'touch' ? 8 : 3)) moved = true;
+        if (!moved) return;
+        this.cx = drag[2] - dx / this.k; this.cy = drag[3] + dy / this.k;
+      } else return;
+      this.draw(); if (this.opts.onView) this.opts.onView(this);
+    });
+    const end = e => {
+      if (!pts.has(e.pointerId)) return;
+      pts.delete(e.pointerId);
+      if (pts.size === 0) {
+        if (drag && !moved && e.type === 'pointerup' && this.opts.onClick) {
+          const r = this.cv.getBoundingClientRect();
+          this.opts.onClick(this.toWorld(e.clientX - r.left, e.clientY - r.top), this);
+        }
+        drag = null; pinch = null;
+      } else if (pts.size === 1) {
+        const [p] = [...pts.values()]; drag = [p[0], p[1], this.cx, this.cy]; pinch = null;
       }
-      drag = null;
-    });
+    };
+    this.cv.addEventListener('pointerup', end);
+    this.cv.addEventListener('pointercancel', end);
     this.cv.addEventListener('wheel', e => {
       e.preventDefault();
       const r = this.cv.getBoundingClientRect(), sx = e.clientX - r.left, sy = e.clientY - r.top;
@@ -101,9 +127,13 @@ class MapView {
     this.drawScale();
     if (this.opts.watermark && this.opts.watermark()) {
       c.save(); c.font = '600 12px system-ui, sans-serif'; c.fillStyle = 'rgba(180,40,30,.85)';
-      c.textAlign = 'right'; c.fillText(this.opts.watermark(), this.w - 10, 20); c.restore();
+      c.textAlign = 'right'; let wm = this.opts.watermark();
+      if (c.measureText(wm).width > this.w - 20) {
+        const [a, ...b] = wm.split('｜');
+        c.fillText(a, this.w - 10, 20); c.fillText(b.join('｜'), this.w - 10, 36);
+      } else c.fillText(wm, this.w - 10, 20); c.restore();
     }
-    if (this.title) { c.save(); c.font = '600 13px system-ui, sans-serif'; c.fillStyle = css.getPropertyValue('--ink').trim() || '#222'; c.fillText(this.title, 10, 40); c.restore(); }
+    if (this.title) { c.save(); c.font = '600 13px system-ui, sans-serif'; c.fillStyle = css.getPropertyValue('--ink').trim() || '#222'; c.fillText(this.title, 10, 54); c.restore(); }
   }
   drawGrid(L) {
     const { nx, ny, cell, v } = L, max = L.vmax || quantileNZ(v, 0.995);
